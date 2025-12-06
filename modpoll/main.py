@@ -44,16 +44,6 @@ def app(name="modpoll"):
     global logger
     logger = logging.getLogger(__name__)
 
-    # Overwrite topic pattern if topic prefix is specified for backward compatibility
-    if args.mqtt_topic_prefix:
-        logger.warning(
-            "(DEPRECATED): The `--mqtt-topic-prefix` argument is deprecated and will be removed in the future release. Use `--mqtt-publish-topic-pattern` and `--mqtt-subscribe-topic-pattern` instead. If both are used, `--mqtt-topic-prefix` argument will take precedence in order to keep backward compatibility."
-        )
-        if args.mqtt_topic_prefix.endswith("/"):
-            args.mqtt_topic_prefix = args.mqtt_topic_prefix[:-1]
-        args.mqtt_publish_topic_pattern = f"{args.mqtt_topic_prefix}/{{device_name}}"
-        args.mqtt_subscribe_topic_pattern = f"{args.mqtt_topic_prefix}/#/set"
-
     # setup mqtt
     if not args.mqtt_host:
         logger.info("No MQTT host specified, skip MQTT setup.")

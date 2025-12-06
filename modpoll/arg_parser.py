@@ -111,11 +111,6 @@ def get_parser():
         help="MQTT client name, If qos > 0, set unique name for multiple clients",
     )
     parser.add_argument(
-        "--mqtt-topic-prefix",
-        default=None,
-        help="(DEPRECATED) Topic prefix for MQTT subscribing/publishing. Defaults to None",
-    )
-    parser.add_argument(
         "--mqtt-publish-topic-pattern",
         default="modpoll/{{device_name}}/data",
         help='Topic pattern for MQTT publish. Use {{device_name}} as placeholder for the device names in Modbus config. Defaults to "modpoll/{{device_name}}/data"',

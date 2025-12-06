@@ -220,8 +220,6 @@ The MQTT topics can be customized by providing the following arguments,
 
 See [document](https://gavinying.github.io/modpoll/usage.html#Named%20Arguments) for details.
 
-> ⚠️ **Note:** The old `--mqtt-topic-prefix` argument is now deprecated and will be removed in the future release. Suggest to use `--mqtt-xxx-topic-pattern` in new project. If both are used, `--mqtt-topic-prefix` argument will take precedence in order to keep backward compatibility until it is removed.
-
 
 <p align="center">
   <img src="docs/assets/screencast-modpoll-mqtt.gif">
@@ -344,4 +342,4 @@ Thanks to Max Brueggemann and Oliver Wagner for their great work.
 
 ## License
 
-MIT © 2021-2024, Ying Shaodong
+MIT © 2021-2026, Ying Shaodong
