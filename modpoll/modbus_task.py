@@ -64,7 +64,7 @@ class Poller:
         try:
             result = None
             data = None
-            if self.fc in (1, 2):
+            if self.fc == 1:
                 result = master.read_coils(
                     self.start_address, self.size, slave=self.device.devid
                 )
@@ -246,6 +246,12 @@ class Reference:
         except ValueError as e:
             raise ValueError(f"Invalid address format for {ref_name}: {e}") from e
         self.dtype = dtype.lower()
+        # Validate that bit syntax is only used with bool dtype
+        if self.bit is not None and self.dtype != "bool":
+            raise ValueError(
+                f"Bit index syntax (address:bit) can only be used with dtype 'bool', "
+                f"but reference {ref_name} has dtype '{self.dtype}'"
+            )
         self.ref_width = self._get_ref_width()
         self.rw = rw.lower()
         self.unit = unit
