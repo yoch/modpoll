@@ -98,7 +98,7 @@ modpoll --once \
 ### Modbus ASCII and framers
 
 - Serial transports: use `--serial PORT --framer ascii` (alias: `--rtu` still accepted); pyserial URLs such as `socket://host:port` and `rfc2217://host:port` work for serial-over-TCP tunnels.
-- Serial supports framers `ascii`, `rtu`, and `binary` (pymodbus defaults to RTU if `--framer default`). TCP/UDP use the `socket` framer (default when `--framer default`); other framers are rejected.
+- Serial supports framers `ascii` and `rtu` (pymodbus defaults to RTU if `--framer default`). Binary framer is no longer supported in pymodbus 3.9+.
 
 ### Prepare Modbus configure file
 

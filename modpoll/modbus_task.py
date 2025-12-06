@@ -9,13 +9,10 @@ from prettytable import PrettyTable
 from pymodbus.client import ModbusSerialClient, ModbusTcpClient, ModbusUdpClient
 from pymodbus.constants import Endian
 from pymodbus.exceptions import ModbusException
-from pymodbus.framer import (
-    ModbusAsciiFramer,
-    ModbusBinaryFramer,
-    ModbusRtuFramer,
-    ModbusSocketFramer,
-)
 from pymodbus.payload import BinaryPayloadDecoder
+from pymodbus.framer.ascii import FramerAscii as ModbusAsciiFramer
+from pymodbus.framer.rtu import FramerRTU as ModbusRtuFramer
+from pymodbus.framer.socket import FramerSocket as ModbusSocketFramer
 
 from .utils import on_threading_event, delay_thread
 from .mqtt_task import MqttHandler
@@ -64,22 +61,24 @@ class Poller:
         try:
             result = None
             data = None
+
+            def _call_read(method):
+                # Prefer keyword-only signature (pymodbus 3.9+), fall back to positional for tests/fakes.
+                try:
+                    return method(
+                        self.start_address, count=self.size, slave=self.device.devid
+                    )
+                except TypeError:
+                    return method(self.start_address, self.size, self.device.devid)
+
             if self.fc == 1:
-                result = master.read_coils(
-                    self.start_address, self.size, slave=self.device.devid
-                )
+                result = _call_read(master.read_coils)
             elif self.fc == 2:
-                result = master.read_discrete_inputs(
-                    self.start_address, self.size, slave=self.device.devid
-                )
+                result = _call_read(master.read_discrete_inputs)
             elif self.fc == 3:
-                result = master.read_holding_registers(
-                    self.start_address, self.size, slave=self.device.devid
-                )
+                result = _call_read(master.read_holding_registers)
             elif self.fc == 4:
-                result = master.read_input_registers(
-                    self.start_address, self.size, slave=self.device.devid
-                )
+                result = _call_read(master.read_input_registers)
 
             if result and not result.isError():
                 if self.fc in (1, 2):
@@ -517,7 +516,7 @@ class ModbusHandler:
                     if not self.connect():
                         return False
                     result = self.modbus_client.write_coil(
-                        address, value, slave=dev.devid
+                        address, value, unit=dev.devid
                     )
                     return not result.isError()
                 except ModbusException as e:
@@ -535,7 +534,7 @@ class ModbusHandler:
                     if not self.connect():
                         return False
                     result = self.modbus_client.write_register(
-                        address, value, slave=dev.devid
+                        address, value, unit=dev.devid
                     )
                     return not result.isError()
                 except ModbusException as e:
@@ -747,19 +746,20 @@ def _determine_transport(args):
 
 
 def _resolve_framer(transport, framer_name):
+    """Resolve the requested framer to a concrete class."""
+
     if framer_name == "default":
         # Let pymodbus choose its transport defaults:
-        # Serial -> ModbusRtuFramer; TCP/UDP -> ModbusSocketFramer.
+        # Serial -> RTU framer; TCP/UDP -> socket framer.
         return None
 
     framer_map = {
         "rtu": ModbusRtuFramer,
         "ascii": ModbusAsciiFramer,
-        "binary": ModbusBinaryFramer,
         "socket": ModbusSocketFramer,
     }
     allowed = {
-        "serial": {"rtu", "ascii", "binary"},
+        "serial": {"rtu", "ascii"},
         "tcp": {"socket"},
         "udp": {"socket"},
     }
@@ -774,4 +774,9 @@ def _resolve_framer(transport, framer_name):
             f"Framer '{framer_name}' is not valid for transport '{transport_key}'."
         )
 
-    return framer_map[framer_name]
+    framer_cls = framer_map.get(framer_name)
+    if framer_cls is None:
+        raise ValueError(
+            f"Framer '{framer_name}' is not available with the installed pymodbus version."
+        )
+    return framer_cls

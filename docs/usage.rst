@@ -50,5 +50,5 @@ The bit is extracted from the final 16-bit value after byte/word swapping based 
 Framers and transports
 ----------------------
 
-- Serial (`--serial`, alias `--rtu`) supports framers `rtu`, `ascii`, and `binary` (e.g., `--serial ... --framer ascii`). If `--framer default` is used, pymodbus defaults to RTU framer.
+- Serial (`--serial`, alias `--rtu`) supports framers `rtu` and `ascii` (e.g., `--serial ... --framer ascii`). Binary framer was removed in pymodbus 3.9+. If `--framer default` is used, pymodbus defaults to RTU framer.
 - TCP/UDP (`--tcp`/`--udp`) use the `socket` framer; other framers are rejected. If `--framer default` is used, pymodbus defaults to socket framer.

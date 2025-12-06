@@ -185,7 +185,7 @@ def get_parser():
     parser.add_argument(
         "--framer",
         default="default",
-        choices=["default", "ascii", "binary", "rtu", "socket"],
-        help="The type of framer for Modbus messages. Serial supports ascii/binary/rtu; TCP/UDP use socket.",
+        choices=["default", "ascii", "rtu", "socket"],
+        help="The type of framer for Modbus messages. Serial supports ascii/rtu; TCP/UDP use socket.",
     )
     return parser
