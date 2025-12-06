@@ -86,7 +86,7 @@ Let's start exploring *modpoll* with *modsim* device, run the following command 
 ```bash
 modpoll --once \
   --tcp modsim.topmaker.net \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/master/examples/modsim.csv
+  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
 ```
 
 <p align="center">
@@ -102,7 +102,7 @@ modpoll --once \
 
 ### Prepare Modbus configure file
 
-The reason we can magically poll data from the online device *modsim* is because we have already provided the [Modbus configure file](https://raw.githubusercontent.com/gavinying/modpoll/master/examples/modsim.csv) for *modsim* device as following,
+The reason we can magically poll data from the online device *modsim* is because we have already provided the [Modbus configure file](https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv) for *modsim* device as following,
 
 ```CSV
 device,modsim01,1,,
@@ -160,7 +160,7 @@ This configuration tells *modpoll* to do the following for each poll,
 
 In practical, you usually need to customize a Modbus configuration file for your own device before running *modpoll* tool, which defines the optimal polling patterns and register mappings according to device vendor's documents.
 
-You can also take a look at [contrib](https://github.com/gavinying/modpoll/tree/master/contrib) folder, which collects a few types of device configuration shared by contributors.
+You can also take a look at [contrib](https://github.com/gavinying/modpoll/tree/main/contrib) folder, which collects a few types of device configuration shared by contributors.
 
 The configuration can be either a local file or a remote public URL resource.
 
@@ -180,7 +180,7 @@ It will create a virtual Modbus TCP device running at `localhost:5020`, and you 
 modpoll \
   --tcp localhost \
   --tcp-port 5020 \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/master/examples/modsim.csv
+  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
 ```
 
 > Use `sudo` before the docker command if you want to use the standard port `502`.
@@ -194,7 +194,7 @@ In a new terminal,
 ```
 modpoll \
   --tcp localhost \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/master/examples/modsim.csv
+  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
 ```
 
 ### Publish data to MQTT broker
@@ -207,7 +207,7 @@ The following example uses a public MQTT broker `broker.emqx.io` for test purpos
 modpoll \
   --tcp modsim.topmaker.net \
   --mqtt-host broker.emqx.io \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/master/examples/modsim.csv
+  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
 ```
 
 With successful data polling and publishing, you can subscribe the default data topic `modpoll/modsim01/data` on the same MQTT broker `broker.emqx.io` to view the collected data.
@@ -267,7 +267,7 @@ Similar to the above *modsim* test, we can poll data with `docker run`, in order
   docker run --rm topmaker/modpoll \
     modpoll -d \
       --tcp modsim.topmaker.net \
-      --config https://raw.githubusercontent.com/gavinying/modpoll/master/examples/modsim.csv
+      --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
   ```
 
 If you want to load a local configure file, you need to mount a local folder onto container volume,

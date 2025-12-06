@@ -33,7 +33,7 @@ Commandline Usage
 
   .. code-block:: shell
 
-    modpoll --tcp modsim.topmaker.net --config https://raw.githubusercontent.com/gavinying/modpoll/master/examples/modsim.csv --export data.csv
+    modpoll --tcp modsim.topmaker.net --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv --export data.csv
 
 Configuration File
 ------------------
