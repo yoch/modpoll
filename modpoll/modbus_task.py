@@ -64,7 +64,7 @@ class Poller:
         try:
             result = None
             data = None
-            if self.fc == 1:
+            if self.fc in (1, 2):
                 result = master.read_coils(
                     self.start_address, self.size, slave=self.device.devid
                 )
@@ -82,34 +82,51 @@ class Poller:
                 )
 
             if result and not result.isError():
-                data = result.bits if self.fc in (1, 2) else result.registers
-                decoder = self._get_decoder(data)
-                cur_ref = self.start_address
-                for ref in self.readableReferences:
-                    if self.fc in (1, 2):
+                if self.fc in (1, 2):
+                    data = result.bits
+                    decoder = self._get_decoder(data)
+                    cur_ref = self.start_address
+                    for ref in self.readableReferences:
                         ref_count = math.ceil(self.size / 8)
-                    else:
-                        ref_count = self.size
-                    # skip all registers before current reference address
-                    while cur_ref < ref.address:
-                        if self.fc in (1, 2):
+                        # skip all registers before current reference address
+                        while cur_ref < ref.address:
                             decoder.skip_bytes(1)
-                        else:
-                            decoder.skip_bytes(2)
-                        cur_ref += 1
-                    if cur_ref >= self.start_address + ref_count:
-                        break
-                    try:
-                        self._decode_and_update_reference(ref, decoder)
-                    except UnicodeDecodeError:
-                        self.logger.error(
-                            f"Failed to decode unicode string for reference: {ref.name}, check the reference address or length of string in configuration file"
-                        )
-                    except:
-                        self.logger.error(
-                            f"Failed to decode value for reference: {ref.name}"
-                        )
-                    cur_ref += ref.ref_width
+                            cur_ref += 1
+                        if cur_ref >= self.start_address + ref_count:
+                            break
+                        try:
+                            self._decode_and_update_reference(ref, decoder)
+                        except UnicodeDecodeError:
+                            self.logger.error(
+                                f"Failed to decode unicode string for reference: {ref.name}, check the reference address or length of string in configuration file"
+                            )
+                        except:
+                            self.logger.error(
+                                f"Failed to decode value for reference: {ref.name}"
+                            )
+                        cur_ref += ref.ref_width
+                else:  # Function codes 3 and 4
+                    data = result.registers
+                    # Sort refs by address to ensure predictable decoding order
+                    sorted_refs = sorted(
+                        self.readableReferences, key=lambda r: r.address
+                    )
+                    for ref in sorted_refs:
+                        # Create and position a new decoder for each reference for robustness
+                        decoder = self._get_decoder(data)
+                        offset_bytes = (ref.address - self.start_address) * 2
+                        if offset_bytes < 0:
+                            self.logger.warning(
+                                f"Reference {ref.name} address {ref.address} is outside of poller range starting at {self.start_address}"
+                            )
+                            continue
+                        decoder.skip_bytes(offset_bytes)
+                        try:
+                            self._decode_and_update_reference(ref, decoder)
+                        except Exception as e:
+                            self.logger.error(
+                                f"Failed to decode value for reference: {ref.name} - {e}"
+                            )
                 self.update_statistics(True)
                 return True
         except ModbusException:
@@ -159,6 +176,13 @@ class Poller:
     def _decode_and_update_reference(
         self, ref: "Reference", decoder: BinaryPayloadDecoder
     ):
+        if ref.dtype == "bool" and ref.bit is not None:
+            # Bit references read a 16-bit register and extract one bit.
+            register_value = decoder.decode_16bit_uint()
+            bit_value = (register_value >> ref.bit) & 1
+            ref.update_value(bool(bit_value))
+            return
+
         decode_methods = {
             "uint16": decoder.decode_16bit_uint,
             "int16": decoder.decode_16bit_int,
@@ -201,7 +225,7 @@ class Reference:
         self,
         device: Device,
         ref_name: str,
-        address: int,
+        ref_addr: str,
         dtype: str,
         rw: str,
         unit: str,
@@ -209,7 +233,18 @@ class Reference:
     ):
         self.device = device
         self.name = ref_name
-        self.address = address
+        self.bit: Optional[int] = None
+        try:
+            if ":" in ref_addr:
+                addr, bit = ref_addr.split(":")
+                self.address = int(addr, 0)
+                self.bit = int(bit)
+                if not 0 <= self.bit <= 15:
+                    raise ValueError("Bit index must be between 0 and 15")
+            else:
+                self.address = int(ref_addr, 0)
+        except ValueError as e:
+            raise ValueError(f"Invalid address format for {ref_name}: {e}") from e
         self.dtype = dtype.lower()
         self.ref_width = self._get_ref_width()
         self.rw = rw.lower()
@@ -220,8 +255,15 @@ class Reference:
 
     def __eq__(self, other):
         if isinstance(other, Reference):
-            return self.address == other.address
+            return self.address == other.address and self.bit == other.bit
         return False
+
+    def __hash__(self):
+        return hash((self.address, self.bit))
+
+    def __repr__(self):
+        addr = f"{self.address}:{self.bit}" if self.bit is not None else self.address
+        return f"<Reference {self.name}@{addr}>"
 
     def _get_ref_width(self) -> int:
         width_map = {
@@ -255,7 +297,7 @@ class Reference:
         ) and self.address + self.ref_width - 1 in range(reference, size + reference)
 
     def update_value(self, v):
-        if self.scale:
+        if self.scale and not isinstance(v, bool):
             try:
                 v = v * float(self.scale)
             except (ValueError, TypeError):
@@ -410,7 +452,7 @@ class ModbusHandler:
             return None
         ref_name = row[1].replace(" ", "_")
         try:
-            address = int(row[2], 0)
+            address = row[2]
         except ValueError:
             self.logger.error(f"Invalid address for reference {ref_name}")
             return None

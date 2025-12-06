@@ -59,3 +59,6 @@ ref,holding_reg11,40012,int32,rw
 ref,holding_reg12,40014,int32,rw
 ref,holding_reg13,40016,float32,rw
 ref,holding_reg14,40018,float32,rw
+# Example of reading a single bit from a register
+# The format is address:bit (0-15), and is only for dtype=bool on registers.
+ref,alarm_bit_15,40019:15,bool,r,
