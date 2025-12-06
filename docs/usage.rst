@@ -17,11 +17,11 @@ Commandline Usage
 
     modpoll --tcp 192.168.1.10 --config examples/modsim.csv
 
-- Connect to Modbus RTU device
+- Connect to Modbus serial device
 
   .. code-block:: shell
 
-    modpoll --rtu /dev/ttyUSB0 --rtu-baud 9600 --config contrib/eniwise/scpms6.csv
+    modpoll --serial /dev/ttyUSB0 --serial-baud 9600 --config contrib/eniwise/scpms6.csv
 
 - Connect to Modbus TCP device and publish data to remote MQTT broker
 
@@ -50,5 +50,5 @@ The bit is extracted from the final 16-bit value after byte/word swapping based 
 Framers and transports
 ----------------------
 
-- Serial (`--rtu`) supports framers `rtu`, `ascii`, and `binary` (e.g., `--rtu ... --framer ascii`). If `--framer default` is used, pymodbus defaults to RTU framer.
+- Serial (`--serial`, alias `--rtu`) supports framers `rtu`, `ascii`, and `binary` (e.g., `--serial ... --framer ascii`). If `--framer default` is used, pymodbus defaults to RTU framer.
 - TCP/UDP (`--tcp`/`--udp`) use the `socket` framer; other framers are rejected. If `--framer default` is used, pymodbus defaults to socket framer.

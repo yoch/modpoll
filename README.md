@@ -97,7 +97,7 @@ modpoll --once \
 
 ### Modbus ASCII and framers
 
-- Serial transports: use `--rtu PORT --framer ascii`; pyserial URLs such as `socket://host:port` and `rfc2217://host:port` work for serial-over-TCP tunnels.
+- Serial transports: use `--serial PORT --framer ascii` (alias: `--rtu` still accepted); pyserial URLs such as `socket://host:port` and `rfc2217://host:port` work for serial-over-TCP tunnels.
 - Serial supports framers `ascii`, `rtu`, and `binary` (pymodbus defaults to RTU if `--framer default`). TCP/UDP use the `socket` framer (default when `--framer default`); other framers are rejected.
 
 ### Prepare Modbus configure file
@@ -293,12 +293,12 @@ for example, if the child folder `examples` contains the config file `modsim.csv
     --config examples/modsim.csv
   ```
 
-- Connect to Modbus RTU device
+- Connect to Modbus serial device
 
   ```bash
   modpoll \
-    --rtu /dev/ttyUSB0 \
-    --rtu-baud 9600 \
+    --serial /dev/ttyUSB0 \
+    --serial-baud 9600 \
     --config contrib/eniwise/scpms6.csv
   ```
 

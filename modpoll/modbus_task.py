@@ -665,9 +665,9 @@ def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
 def _create_modbus_client(args):
     transport = _determine_transport(args)
 
-    if transport == "rtu":
+    if transport == "serial":
         framer = _resolve_framer("serial", args.framer)
-        return _create_serial_client(args, args.rtu, framer)
+        return _create_serial_client(args, args.serial, framer)
 
     if transport == "tcp":
         framer = _resolve_framer("tcp", args.framer)
@@ -683,10 +683,10 @@ def _create_modbus_client(args):
 def _create_serial_client(args, port, framer):
     if not port:
         raise ValueError("Serial port/URL must be provided for serial transports.")
-    parity = _get_parity(args.rtu_parity)
+    parity = _get_parity(args.serial_parity)
     client_args = {
         "port": port,
-        "baudrate": int(args.rtu_baud),
+        "baudrate": int(args.serial_baud),
         "bytesize": 8,
         "parity": parity,
         "stopbits": 1,
@@ -719,10 +719,10 @@ def _create_udp_client(args, framer):
     return ModbusUdpClient(**client_args)
 
 
-def _get_parity(rtu_parity):
-    if rtu_parity == "odd":
+def _get_parity(serial_parity):
+    if serial_parity == "odd":
         return "O"
-    elif rtu_parity == "even":
+    elif serial_parity == "even":
         return "E"
     else:
         return "N"
@@ -730,8 +730,8 @@ def _get_parity(rtu_parity):
 
 def _determine_transport(args):
     transports = []
-    if args.rtu:
-        transports.append("rtu")
+    if args.serial:
+        transports.append("serial")
     if args.tcp:
         transports.append("tcp")
     if args.udp:
@@ -741,7 +741,7 @@ def _determine_transport(args):
         raise ValueError("No communication method specified.")
     if len(transports) > 1:
         raise ValueError(
-            "Multiple communication methods specified; pick one of --rtu/--tcp/--udp."
+            "Multiple communication methods specified; pick one of --serial/--tcp/--udp (alias: --rtu)."
         )
     return transports[0]
 

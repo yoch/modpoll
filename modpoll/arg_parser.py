@@ -54,15 +54,24 @@ def get_parser():
     parser.add_argument(
         "--udp-port", type=int, default=502, help="Port for MODBUS UDP. Defaults to 502"
     )
-    parser.add_argument("--rtu", help="pyserial URL (or port name) for RTU serial port")
     parser.add_argument(
+        "--serial",
+        "--rtu",
+        dest="serial",
+        help="pyserial URL (or port name) for serial transport (alias: --rtu)",
+    )
+    parser.add_argument(
+        "--serial-baud",
         "--rtu-baud",
+        dest="serial_baud",
         type=int,
         default=9600,
         help="Baud rate for serial port. Defaults to 9600",
     )
     parser.add_argument(
+        "--serial-parity",
         "--rtu-parity",
+        dest="serial_parity",
         choices=["none", "odd", "even"],
         default="none",
         help="Parity for serial port. Defaults to none",

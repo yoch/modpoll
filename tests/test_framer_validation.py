@@ -22,7 +22,7 @@ def test_rtu_with_ascii_framer_supported(monkeypatch):
         [
             "--config",
             "dummy.csv",
-            "--rtu",
+            "--serial",
             "/dev/ttyUSB0",
             "--framer",
             "ascii",
@@ -55,7 +55,7 @@ def test_multiple_transports_rejected():
         [
             "--config",
             "dummy.csv",
-            "--rtu",
+            "--serial",
             "/dev/ttyUSB0",
             "--tcp",
             "localhost",
@@ -90,3 +90,29 @@ def test_tcp_socket_framer_is_applied(monkeypatch):
 
     assert client == "tcp-client"
     assert captured["framer"] is mt.ModbusSocketFramer
+
+
+def test_rtu_alias_still_parses(monkeypatch):
+    captured = {}
+
+    def fake_serial_client(**kwargs):
+        captured.update(kwargs)
+        return "serial-client"
+
+    monkeypatch.setattr(mt, "ModbusSerialClient", fake_serial_client)
+
+    args = _fake_args(
+        [
+            "--config",
+            "dummy.csv",
+            "--rtu",
+            "/dev/ttyUSB0",
+            "--framer",
+            "rtu",
+        ]
+    )
+
+    client = mt._create_modbus_client(args)
+
+    assert client == "serial-client"
+    assert captured["port"] == "/dev/ttyUSB0"
