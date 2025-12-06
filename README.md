@@ -39,7 +39,7 @@ In fact, *modpoll* helps to bridge between the traditional field-bus world and t
 
 ## Installation
 
-This tool tested on Python 3.8+, the package is available in the [Python Package Index](https://pypi.org/), users can easily install it using `pip` or `pipx`.
+This tool tested on Python 3.10+ (Ubuntu 22.04+ or equivalent), the package is available in the [Python Package Index](https://pypi.org/), users can easily install it using `pip` or `pipx`. Ubuntu 20.04 and Python 3.8 are no longer supported.
 
 ### Using PIP
 
