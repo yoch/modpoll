@@ -149,6 +149,39 @@ def test_publish_skips_when_disconnected_qos0(monkeypatch):
     assert result is None
 
 
+def test_connect_mqtt_v311_omits_clean_session_kwarg(monkeypatch):
+    """paho-mqtt 2.x rejects clean_session in connect(); it is set on the Client constructor."""
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.local",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client",
+        qos=0,
+        mqtt_version="3.1.1",
+    )
+
+    assert handler.setup()
+
+    captured = {}
+
+    def fake_connect(**kwargs):
+        captured.update(kwargs)
+        return 0
+
+    monkeypatch.setattr(handler.mqtt_client, "connect", fake_connect)
+    monkeypatch.setattr(handler.mqtt_client, "loop_start", lambda: None)
+
+    assert handler.connect() is True
+    assert "clean_session" not in captured
+    assert captured == {
+        "host": "broker.local",
+        "port": 1883,
+        "keepalive": 60,
+    }
+
+
 def test_publish_attempts_reconnect_when_disconnected_qos1(monkeypatch):
     handler = MqttHandler(
         name="test_mqtt",

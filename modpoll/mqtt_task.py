@@ -186,8 +186,6 @@ class MqttHandler:
             }
             if self.mqtt_version == "5.0":
                 connect_kwargs["clean_start"] = self.clean_start_or_session
-            else:
-                connect_kwargs["clean_session"] = self.clean_start_or_session
 
             self.mqtt_client.connect(**connect_kwargs)
             self.mqtt_client.loop_start()
