@@ -7,13 +7,12 @@ from typing import List, Optional
 import requests
 from prettytable import PrettyTable
 from pymodbus.client import ModbusSerialClient, ModbusTcpClient, ModbusUdpClient
-from pymodbus.constants import Endian
 from pymodbus.exceptions import ModbusException
-from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.framer.ascii import FramerAscii as ModbusAsciiFramer
 from pymodbus.framer.rtu import FramerRTU as ModbusRtuFramer
 from pymodbus.framer.socket import FramerSocket as ModbusSocketFramer
 
+from .register_decode import Endian, RegisterDecoder
 from .utils import on_threading_event, delay_thread
 from .mqtt_task import MqttHandler
 
@@ -22,6 +21,17 @@ FLOAT_TYPE_PRECISION = 3
 CONFIG_DEVICE_COL_MIN = 3
 CONFIG_POLL_COL_MIN = 5
 CONFIG_REF_COL_MIN = 5
+
+_ENDIAN_MAP = {
+    "BE_BE": (Endian.BIG, Endian.BIG),
+    "LE_BE": (Endian.LITTLE, Endian.BIG),
+    "LE_LE": (Endian.LITTLE, Endian.LITTLE),
+    "BE_LE": (Endian.BIG, Endian.LITTLE),
+}
+
+
+def _call_with_device_id(method, *args, device_id: int, **kwargs):
+    return method(*args, device_id=device_id, **kwargs)
 
 
 class Device:
@@ -63,13 +73,12 @@ class Poller:
             data = None
 
             def _call_read(method):
-                # Prefer keyword-only signature (pymodbus 3.9+), fall back to positional for tests/fakes.
-                try:
-                    return method(
-                        self.start_address, count=self.size, slave=self.device.devid
-                    )
-                except TypeError:
-                    return method(self.start_address, self.size, self.device.devid)
+                return _call_with_device_id(
+                    method,
+                    self.start_address,
+                    count=self.size,
+                    device_id=self.device.devid,
+                )
 
             if self.fc == 1:
                 result = _call_read(master.read_coils)
@@ -139,41 +148,17 @@ class Poller:
         return False
 
     def _get_decoder(self, data):
-        if "BE_BE" == self.endian.upper():
-            return (
-                BinaryPayloadDecoder.fromRegisters(
-                    data, byteorder=Endian.BIG, wordorder=Endian.BIG
-                )
-                if self.fc not in (1, 2)
-                else BinaryPayloadDecoder.fromCoils(data, byteorder=Endian.BIG)
-            )
-        elif "LE_BE" == self.endian.upper():
-            return (
-                BinaryPayloadDecoder.fromRegisters(
-                    data, byteorder=Endian.LITTLE, wordorder=Endian.BIG
-                )
-                if self.fc not in (1, 2)
-                else BinaryPayloadDecoder.fromCoils(data, byteorder=Endian.LITTLE)
-            )
-        elif "LE_LE" == self.endian.upper():
-            return (
-                BinaryPayloadDecoder.fromRegisters(
-                    data, byteorder=Endian.LITTLE, wordorder=Endian.LITTLE
-                )
-                if self.fc not in (1, 2)
-                else BinaryPayloadDecoder.fromCoils(data, byteorder=Endian.LITTLE)
-            )
-        else:
-            return (
-                BinaryPayloadDecoder.fromRegisters(
-                    data, byteorder=Endian.BIG, wordorder=Endian.LITTLE
-                )
-                if self.fc not in (1, 2)
-                else BinaryPayloadDecoder.fromCoils(data, byteorder=Endian.BIG)
-            )
+        byteorder, wordorder = _ENDIAN_MAP.get(
+            self.endian.upper(), (Endian.BIG, Endian.LITTLE)
+        )
+        if self.fc in (1, 2):
+            return RegisterDecoder.from_coils(data, byteorder=byteorder)
+        return RegisterDecoder.from_registers(
+            data, byteorder=byteorder, wordorder=wordorder
+        )
 
     def _decode_and_update_reference(
-        self, ref: "Reference", decoder: BinaryPayloadDecoder
+        self, ref: "Reference", decoder: RegisterDecoder
     ):
         if ref.dtype == "bool" and ref.bit is not None:
             # Bit references read a 16-bit register and extract one bit.
@@ -515,8 +500,11 @@ class ModbusHandler:
                 try:
                     if not self.connect():
                         return False
-                    result = self.modbus_client.write_coil(
-                        address, value, unit=dev.devid
+                    result = _call_with_device_id(
+                        self.modbus_client.write_coil,
+                        address,
+                        value,
+                        device_id=dev.devid,
                     )
                     return not result.isError()
                 except ModbusException as e:
@@ -533,8 +521,11 @@ class ModbusHandler:
                 try:
                     if not self.connect():
                         return False
-                    result = self.modbus_client.write_register(
-                        address, value, unit=dev.devid
+                    result = _call_with_device_id(
+                        self.modbus_client.write_register,
+                        address,
+                        value,
+                        device_id=dev.devid,
                     )
                     return not result.isError()
                 except ModbusException as e:
