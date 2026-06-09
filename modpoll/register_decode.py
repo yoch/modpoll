@@ -8,9 +8,6 @@ from __future__ import annotations
 from array import array
 from struct import pack, unpack
 
-from pymodbus.pdu.utils import pack_bitstring, unpack_bitstring
-
-
 class Endian:
     BIG = ">"
     LITTLE = "<"
@@ -18,6 +15,8 @@ class Endian:
 
 class RegisterDecoder:
     """Decode Modbus register/coil payloads with configurable byte and word order."""
+
+    __slots__ = ("_payload", "_pointer", "_byteorder", "_wordorder")
 
     def __init__(self, payload: bytes, byteorder=Endian.LITTLE, wordorder=Endian.BIG):
         self._payload = payload
@@ -35,22 +34,8 @@ class RegisterDecoder:
         payload = pack(f"!{len(registers)}H", *registers)
         return cls(payload, byteorder, wordorder)
 
-    @classmethod
-    def from_coils(
-        cls,
-        coils: list[bool],
-        byteorder=Endian.LITTLE,
-    ) -> RegisterDecoder:
-        # Unused by modpoll FC1/FC2 polling (direct result.bits slicing). Kept for API parity.
-        payload = b""
-        if padding := len(coils) % 8:
-            coils = [False] * padding + coils
-        for chunk in (coils[i : i + 8] for i in range(0, len(coils), 8)):
-            payload += pack_bitstring(chunk[::-1])
-        return cls(payload, byteorder)
-
     def _unpack_words(self, handle: bytes) -> bytes:
-        if Endian.LITTLE in {self._byteorder, self._wordorder}:
+        if Endian.LITTLE in (self._byteorder, self._wordorder):
             handle_array = array("H", handle)
             if self._byteorder == Endian.LITTLE:
                 handle_array.byteswap()
@@ -103,11 +88,6 @@ class RegisterDecoder:
         self._pointer += 8
         handle = self._unpack_words(self._payload[self._pointer - 8 : self._pointer])
         return unpack("!d", handle)[0]
-
-    def decode_bits(self, package_len: int = 1) -> list[bool]:
-        self._pointer += package_len
-        handle = self._payload[self._pointer - 1 : self._pointer]
-        return unpack_bitstring(handle)
 
     def decode_string(self, size: int = 1) -> bytes:
         self._pointer += size

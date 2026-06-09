@@ -257,7 +257,6 @@ class Reference:
         self.unit = unit
         self.scale = scale
         self.val = None
-        self.last_val = None
 
     def __eq__(self, other):
         if isinstance(other, Reference):
@@ -320,7 +319,6 @@ class Reference:
                 v = v * float(self.scale)
             except (ValueError, TypeError):
                 pass
-        self.last_val = self.val
         self.val = v
 
 
@@ -633,7 +631,7 @@ class ModbusHandler:
             print(f"\nDevice: {dev.name}")
             print(table)
 
-    def publish_data(self, timestamp=None, on_change=False):
+    def publish_data(self, timestamp=None):
         if not self.mqtt_handler or not self.mqtt_publish_topic_pattern:
             return
 
@@ -650,32 +648,31 @@ class ModbusHandler:
                     continue
                 if isinstance(ref.val, float) and not math.isfinite(ref.val):
                     continue
-                if not on_change or ref.val != ref.last_val:
-                    ref_val = (
-                        round(ref.val, FLOAT_TYPE_PRECISION)
-                        if isinstance(ref.val, float)
-                        else ref.val
-                    )
-                    key = f"{ref.name}|{ref.unit}" if ref.unit else ref.name
-                    payload[key] = ref_val
+                ref_val = (
+                    round(ref.val, FLOAT_TYPE_PRECISION)
+                    if isinstance(ref.val, float)
+                    else ref.val
+                )
+                key = f"{ref.name}|{ref.unit}" if ref.unit else ref.name
+                payload[key] = ref_val
 
-                    if self.mqtt_single_publish:
-                        topic = f"{self.mqtt_publish_topic_pattern.replace('{{device_name}}', dev.name)}/{ref.name}"
-                        if isinstance(ref_val, list):
-                            for i, entry in enumerate(ref_val):
-                                msg = (
-                                    json.dumps(entry)
-                                    if isinstance(entry, bool)
-                                    else entry
-                                )
-                                self.mqtt_handler.publish(f"{topic}/{i}", msg)
-                        else:
+                if self.mqtt_single_publish:
+                    topic = f"{self.mqtt_publish_topic_pattern.replace('{{device_name}}', dev.name)}/{ref.name}"
+                    if isinstance(ref_val, list):
+                        for i, entry in enumerate(ref_val):
                             msg = (
-                                json.dumps(ref_val)
-                                if isinstance(ref_val, bool)
-                                else ref_val
+                                json.dumps(entry)
+                                if isinstance(entry, bool)
+                                else entry
                             )
-                            self.mqtt_handler.publish(topic, msg)
+                            self.mqtt_handler.publish(f"{topic}/{i}", msg)
+                    else:
+                        msg = (
+                            json.dumps(ref_val)
+                            if isinstance(ref_val, bool)
+                            else ref_val
+                        )
+                        self.mqtt_handler.publish(topic, msg)
 
             if payload and not self.mqtt_single_publish:
                 if timestamp is not None:
