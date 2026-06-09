@@ -1,4 +1,5 @@
 import pytest
+from pymodbus.framer import FramerType
 
 from modpoll.arg_parser import get_parser
 from modpoll import modbus_task as mt
@@ -31,7 +32,7 @@ def test_rtu_with_ascii_framer_supported(monkeypatch):
 
     mt._create_modbus_client(args)
 
-    assert captured["framer"] is mt.ModbusAsciiFramer
+    assert captured["framer"] is FramerType.ASCII
 
 
 def test_tcp_with_ascii_framer_rejected():
@@ -89,7 +90,7 @@ def test_tcp_socket_framer_is_applied(monkeypatch):
     client = mt._create_modbus_client(args)
 
     assert client == "tcp-client"
-    assert captured["framer"] is mt.ModbusSocketFramer
+    assert captured["framer"] is FramerType.SOCKET
 
 
 def test_rtu_alias_still_parses(monkeypatch):

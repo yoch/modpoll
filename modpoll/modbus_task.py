@@ -1,15 +1,14 @@
 import csv
 import json
 import logging
+import math
 from typing import List, Optional
 
 import requests
 from prettytable import PrettyTable
 from pymodbus.client import ModbusSerialClient, ModbusTcpClient, ModbusUdpClient
 from pymodbus.exceptions import ModbusException
-from pymodbus.framer.ascii import FramerAscii as ModbusAsciiFramer
-from pymodbus.framer.rtu import FramerRTU as ModbusRtuFramer
-from pymodbus.framer.socket import FramerSocket as ModbusSocketFramer
+from pymodbus.framer import FramerType
 
 from .register_decode import Endian, RegisterDecoder
 from .utils import on_threading_event, delay_thread
@@ -88,7 +87,7 @@ class Poller:
             elif self.fc == 4:
                 result = _call_read(master.read_input_registers)
 
-            if result and not result.isError():
+            if result is not None and not result.isError():
                 if self.fc in (1, 2):
                     bits = result.bits
                     sorted_refs = sorted(
@@ -178,6 +177,12 @@ class Poller:
             ref.update_value(bool(bit_value))
             return
 
+        if ref.dtype in ("bool8", "bool16"):
+            width = 8 if ref.dtype == "bool8" else 16
+            word = decoder.decode_16bit_uint()
+            ref.update_value([bool((word >> i) & 1) for i in range(width)])
+            return
+
         decode_methods = {
             "uint16": decoder.decode_16bit_uint,
             "int16": decoder.decode_16bit_int,
@@ -188,8 +193,6 @@ class Poller:
             "float16": decoder.decode_16bit_float,
             "float32": decoder.decode_32bit_float,
             "float64": decoder.decode_64bit_float,
-            "bool8": decoder.decode_bits,
-            "bool16": lambda: decoder.decode_bits() + decoder.decode_bits(),
         }
 
         if ref.dtype in decode_methods:
@@ -497,8 +500,12 @@ class ModbusHandler:
         return True
 
     def connect(self) -> bool:
-        if not self.connected:
-            self.connected = self.modbus_client.connect()
+        try:
+            if not self.connected:
+                self.connected = self.modbus_client.connect()
+        except (ModbusException, OSError) as e:
+            self.logger.error(f"Modbus connect failed: {e}")
+            self.connected = False
         return self.connected
 
     def disconnect(self):
@@ -511,6 +518,17 @@ class ModbusHandler:
             dev.pollSuccess = False
         if not self.connect():
             self.logger.error("Failed to connect to Modbus client")
+            for dev in self.deviceList:
+                for p in dev.pollerList:
+                    if not p.disabled:
+                        p.update_statistics(False)
+                        if self.autoremove and p.failcounter >= 3:
+                            p.disabled = True
+                            self.logger.warning(
+                                f"Disabled poller for device {dev.name} "
+                                f"(fc={p.fc}, start={p.start_address}) "
+                                f"after 3 consecutive failures"
+                            )
             return
         try:
             for dev in self.deviceList:
@@ -519,11 +537,7 @@ class ModbusHandler:
                 for p in dev.pollerList:
                     if not p.disabled:
                         p.poll(self.modbus_client)
-                        if (
-                            self.autoremove
-                            and p.failcounter >= 3
-                            and not p.disabled
-                        ):
+                        if self.autoremove and p.failcounter >= 3:
                             p.disabled = True
                             self.logger.warning(
                                 f"Disabled poller for device {dev.name} "
@@ -550,12 +564,10 @@ class ModbusHandler:
                         value,
                         device_id=dev.devid,
                     )
-                    return not result.isError()
+                    return result is not None and not result.isError()
                 except ModbusException as e:
                     self.logger.error(f"Error writing coil: {e}")
                     return False
-                finally:
-                    self.disconnect()
         self.logger.error(f"Device {device_name} not found")
         return False
 
@@ -571,12 +583,10 @@ class ModbusHandler:
                         value,
                         device_id=dev.devid,
                     )
-                    return not result.isError()
+                    return result is not None and not result.isError()
                 except ModbusException as e:
                     self.logger.error(f"Error writing register: {e}")
                     return False
-                finally:
-                    self.disconnect()
         self.logger.error(f"Device {device_name} not found")
         return False
 
@@ -611,6 +621,8 @@ class ModbusHandler:
             payload = {}
             for ref in dev.references.values():
                 if ref.val is None:
+                    continue
+                if isinstance(ref.val, float) and not math.isfinite(ref.val):
                     continue
                 if not on_change or ref.val != ref.last_val:
                     ref_val = (
@@ -670,7 +682,6 @@ class ModbusHandler:
 
     def close(self):
         self.disconnect()
-        self.modbus_client = None
 
     def get_device_list(self) -> List[Device]:
         return self.deviceList
@@ -792,9 +803,9 @@ def _resolve_framer(transport, framer_name):
         return None
 
     framer_map = {
-        "rtu": ModbusRtuFramer,
-        "ascii": ModbusAsciiFramer,
-        "socket": ModbusSocketFramer,
+        "rtu": FramerType.RTU,
+        "ascii": FramerType.ASCII,
+        "socket": FramerType.SOCKET,
     }
     allowed = {
         "serial": {"rtu", "ascii"},
@@ -812,9 +823,9 @@ def _resolve_framer(transport, framer_name):
             f"Framer '{framer_name}' is not valid for transport '{transport_key}'."
         )
 
-    framer_cls = framer_map.get(framer_name)
-    if framer_cls is None:
+    framer_type = framer_map.get(framer_name)
+    if framer_type is None:
         raise ValueError(
             f"Framer '{framer_name}' is not available with the installed pymodbus version."
         )
-    return framer_cls
+    return framer_type

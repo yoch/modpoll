@@ -21,6 +21,16 @@ def _signal_handler(signal, frame):
     set_threading_event()
 
 
+def extract_device_from_mqtt_topic(pattern: str, topic: str):
+    """Return device name from the first '+' wildcard segment, or None if no match."""
+    parts = pattern.split("+")
+    if len(parts) < 2:
+        raise ValueError("MQTT subscribe pattern must contain '+' wildcard")
+    topic_regex = "([^/\n]*)".join(re.escape(p) for p in parts)
+    match = re.fullmatch(topic_regex, topic)
+    return match.group(1) if match else None
+
+
 def setup_logging(level, format):
     logging.basicConfig(level=level, format=format)
 
@@ -35,6 +45,7 @@ def app(name="modpoll"):
     )
 
     signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
 
     # parse args
     args = get_parser().parse_args()
@@ -138,13 +149,17 @@ def app(name="modpoll"):
         if mqtt_handler:
             topic, payload = mqtt_handler.receive()
             if topic and payload:
-                # extract device_name
-                topic_regex = args.mqtt_subscribe_topic_pattern.replace(
-                    "+", "([^/\n]*)"
-                )
-                match = re.search(topic_regex, topic)
-                if match:
-                    device_name = match.group(1)
+                try:
+                    device_name = extract_device_from_mqtt_topic(
+                        args.mqtt_subscribe_topic_pattern, topic
+                    )
+                except ValueError:
+                    logger.error(
+                        "MQTT subscribe pattern must contain '+' wildcard: "
+                        f"{args.mqtt_subscribe_topic_pattern}"
+                    )
+                    continue
+                if device_name:
                     logger.info(
                         f"Received request to write data for device {device_name}"
                     )

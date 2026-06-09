@@ -1,12 +1,11 @@
-"""Regression tests for real-world bugs and documented limitations.
-
-Fixed bugs have passing tests; known limitations (bool8 on registers) keep xfail.
-"""
+"""Regression tests for real-world bugs and documented limitations."""
 
 import json
 from unittest.mock import MagicMock
 
 import pytest
+
+from modpoll import main
 
 from modpoll.arg_parser import get_parser
 from modpoll.modbus_task import Device, Poller, Reference, ModbusHandler
@@ -219,13 +218,10 @@ def test_autoremove_without_flag_keeps_poller_enabled():
 
 
 # ---------------------------------------------------------------------------
-# Known limitation: bool8 on registers (documented, not fixed)
+# Fixed: bool8 on holding registers decodes 16-bit word bits
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="decode_bits reads the first payload byte; 0x00FF low-byte flags decode as all False"
-)
 def test_bool8_on_holding_register_should_decode_low_byte_0x00ff():
     device = Device("dev", 1)
     poller = Poller(device, 3, 0, 1, "BE_BE")
@@ -237,23 +233,28 @@ def test_bool8_on_holding_register_should_decode_low_byte_0x00ff():
     assert ref.val == [True] * 8
 
 
-def test_bool8_on_holding_register_reads_high_byte_only():
+def test_bool8_on_holding_register_reads_low_byte_bits_be_be():
     device = Device("dev", 1)
     poller = Poller(device, 3, 0, 1, "BE_BE")
     ref = Reference(device, "flags", "0", "bool8", "r", None, None)
     poller.add_readable_reference(ref)
     poller.poll(FakeModbusMaster(registers=[0x00FF]))
-    assert ref.val == [False] * 8
+    assert ref.val == [True] * 8
 
 
-def test_bool8_on_holding_register_ignores_endian_configuration():
+def test_bool8_on_holding_register_respects_endian_configuration():
     device = Device("dev", 1)
-    for endian in ("BE_BE", "LE_BE", "LE_LE", "BE_LE"):
-        poller = Poller(device, 3, 0, 1, endian)
-        ref = Reference(device, "flags", "0", "bool8", "r", None, None)
-        poller.add_readable_reference(ref)
-        poller.poll(FakeModbusMaster(registers=[0x00FF]))
-        assert ref.val == [False] * 8, endian
+    poller_be = Poller(device, 3, 0, 1, "BE_BE")
+    ref_be = Reference(device, "flags_be", "0", "bool8", "r", None, None)
+    poller_be.add_readable_reference(ref_be)
+    poller_be.poll(FakeModbusMaster(registers=[0x00FF]))
+    assert ref_be.val == [True] * 8
+
+    poller_le = Poller(device, 3, 0, 1, "LE_BE")
+    ref_le = Reference(device, "flags_le", "0", "bool8", "r", None, None)
+    poller_le.add_readable_reference(ref_le)
+    poller_le.poll(FakeModbusMaster(registers=[0x00FF]))
+    assert ref_le.val == [False] * 8
 
 
 def test_bool8_on_coils_and_discrete_inputs_works():
@@ -310,6 +311,72 @@ def test_mqtt_connect_typeerror_propagates_instead_of_returning_false():
 
     with pytest.raises(TypeError, match="unexpected keyword argument"):
         handler.connect()
+
+
+def test_poller_handles_none_result():
+    device = Device("dev", 1)
+    poller = Poller(device, 1, 0, 8, "BE_BE")
+    ref = Reference(device, "coil0", "0", "bool", "r", None, None)
+    poller.add_readable_reference(ref)
+
+    class MasterReturnsNone:
+        def read_coils(self, *args, **kwargs):
+            return None
+
+    assert poller.poll(MasterReturnsNone()) is False
+    assert ref.val is None
+
+
+def test_autoremove_on_connect_failure():
+    device = Device("dev", 1)
+    poller = Poller(device, 3, 0, 1, "BE_BE")
+    device.pollerList = [poller]
+
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        autoremove=True,
+        daemon=True,
+    )
+    handler.deviceList = [device]
+    handler.connect = MagicMock(return_value=False)
+    handler.disconnect = MagicMock()
+
+    for _ in range(3):
+        handler.poll()
+
+    assert poller.disabled is True
+
+
+def test_mqtt_subscribe_pattern_rejects_prefixed_topic():
+    pattern = "modpoll/+/set"
+    assert (
+        main.extract_device_from_mqtt_topic(pattern, "modpoll/dev/set") == "dev"
+    )
+    assert main.extract_device_from_mqtt_topic(pattern, "xmodpoll/dev/set") is None
+
+
+def test_publish_data_omits_non_finite_floats():
+    device = Device("dev", 1)
+    device.pollSuccess = True
+    good = Reference(device, "good", "0", "float32", "r", None, None)
+    good.val = 1.5
+    bad = Reference(device, "nan", "2", "float32", "r", None, None)
+    bad.val = float("nan")
+    device.references = {"good": good, "nan": bad}
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+    )
+    handler.deviceList = [device]
+    handler.publish_data()
+
+    payload = json.loads(mqtt.publish.call_args[0][1])
+    assert payload == {"good": 1.5}
 
 
 def test_unknown_endian_falls_back_without_error():
