@@ -3,6 +3,7 @@ import sys
 import pytest
 
 from modpoll import main
+from modpoll.arg_parser import get_parser
 
 
 def test_mqtt_tls_cli_options_forwarded(monkeypatch):
@@ -95,6 +96,21 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
     assert init_args["insecure"] is True
     assert init_args["mqtt_version"] == "3.1.1"
     assert init_args["subscribe_topics"] == ["modpoll/+/set"]
+
+
+def test_csv_delimiter_invalid_code_rejected():
+    parser = get_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            [
+                "--config",
+                "dummy.csv",
+                "--tcp",
+                "127.0.0.1",
+                "--csv-delimiter",
+                "pipe",
+            ]
+        )
 
 
 def test_mqtt_subscribe_pattern_without_plus_exits(monkeypatch):

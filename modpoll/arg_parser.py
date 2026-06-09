@@ -2,6 +2,8 @@ import argparse
 
 from . import __version__
 
+_CSV_DELIMITER_CHOICES = ("comma", "tab")
+
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -19,6 +21,15 @@ def get_parser():
         required=True,
         help="A local path or URL of Modbus configuration file. Required!",
         nargs="+",
+    )
+    parser.add_argument(
+        "--csv-delimiter",
+        default="comma",
+        choices=_CSV_DELIMITER_CHOICES,
+        help=(
+            "Column delimiter code for Modbus config files "
+            f"({', '.join(_CSV_DELIMITER_CHOICES)}). Defaults to comma"
+        ),
     )
     parser.add_argument(
         "-d",

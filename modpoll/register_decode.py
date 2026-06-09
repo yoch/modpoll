@@ -111,7 +111,10 @@ class RegisterDecoder:
 
     def decode_string(self, size: int = 1) -> bytes:
         self._pointer += size
-        return self._payload[self._pointer - size : self._pointer]
+        handle = self._payload[self._pointer - size : self._pointer]
+        if size >= 2:
+            handle = self._unpack_words(handle)
+        return handle
 
     def skip_bytes(self, nbytes: int) -> None:
         self._pointer += nbytes

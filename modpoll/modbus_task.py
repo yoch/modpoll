@@ -27,6 +27,11 @@ _ENDIAN_MAP = {
     "BE_LE": (Endian.BIG, Endian.LITTLE),
 }
 
+CSV_DELIMITER_CODES = {
+    "comma": ",",
+    "tab": "\t",
+}
+
 
 def _call_with_device_id(method, *args, device_id: int, **kwargs):
     return method(*args, device_id=device_id, **kwargs)
@@ -141,9 +146,7 @@ class Poller:
         return False
 
     def _get_decoder(self, data):
-        byteorder, wordorder = _ENDIAN_MAP.get(
-            self.endian.upper(), (Endian.BIG, Endian.LITTLE)
-        )
+        byteorder, wordorder = _ENDIAN_MAP[self.endian.strip().upper()]
         return RegisterDecoder.from_registers(
             data, byteorder=byteorder, wordorder=wordorder
         )
@@ -334,9 +337,12 @@ class ModbusHandler:
         mqtt_diagnostics_topic_pattern: Optional[str] = None,
         mqtt_single_publish: bool = False,
         autoremove: bool = False,
+        csv_delimiter_code: str = "comma",
     ):
         self.modbus_client = modbus_client
         self.config_file = config_file
+        self.csv_delimiter_code = csv_delimiter_code
+        self.csv_delimiter = CSV_DELIMITER_CODES[csv_delimiter_code]
         self.mqtt_handler = mqtt_handler
         self.timeout = timeout
         self.interval = interval
@@ -356,12 +362,14 @@ class ModbusHandler:
                 response = s.get(self.config_file, timeout=self.timeout)
                 response.raise_for_status()
                 decoded_content = response.content.decode("utf-8")
-                csv_reader = csv.reader(decoded_content.splitlines(), delimiter=",")
+                csv_reader = csv.reader(
+                    decoded_content.splitlines(), delimiter=self.csv_delimiter
+                )
                 self.deviceList = self._parse_config(csv_reader)
         except requests.RequestException:
             try:
                 with open(self.config_file, "r") as f:
-                    csv_reader = csv.reader(f)
+                    csv_reader = csv.reader(f, delimiter=self.csv_delimiter)
                     self.deviceList = self._parse_config(csv_reader)
             except IOError as e:
                 self.logger.error(f"Error opening file: {e}")
@@ -370,7 +378,12 @@ class ModbusHandler:
             self.logger.info(f"Added {len(self.deviceList)} device(s)...")
             return True
         else:
-            self.logger.error("No device found in the config file. Skipping.")
+            self.logger.error(
+                "No device found in the config file. Skipping. "
+                "If columns are not split correctly, try --csv-delimiter "
+                f"({', '.join(sorted(CSV_DELIMITER_CODES))}); "
+                f"current: {self.csv_delimiter_code}"
+            )
             return False
 
     def _parse_config(self, csv_reader) -> List[Device]:
@@ -397,6 +410,16 @@ class ModbusHandler:
                     if not current_device:
                         self.logger.error("No device to add poller.")
                         continue
+                    if len(row) < CONFIG_POLL_COL_MIN:
+                        self.logger.error("Invalid poller configuration")
+                        return []
+                    endian_key = row[4].strip().upper()
+                    if endian_key not in _ENDIAN_MAP:
+                        self.logger.error(
+                            f"Invalid endian '{row[4].strip()}'; must be one of: "
+                            f"{', '.join(_ENDIAN_MAP.keys())}"
+                        )
+                        return []
                     current_poller = self._create_poller(row, current_device)
                     if current_poller:
                         current_device.pollerList.append(current_poller)
@@ -410,6 +433,11 @@ class ModbusHandler:
                     if ref and self._validate_reference(ref, current_poller):
                         if "r" in ref.rw.lower():
                             current_poller.add_readable_reference(ref)
+                        if ref.name in current_device.references:
+                            self.logger.warning(
+                                f"Duplicate reference name '{ref.name}' on device "
+                                f"{current_device.name}; overwriting previous entry"
+                            )
                         current_device.add_reference_mapping(ref)
                         self.logger.debug(
                             f"Add reference {ref.name} to device {current_device.name}"
@@ -420,9 +448,6 @@ class ModbusHandler:
             return []
 
     def _create_poller(self, row, current_device):
-        if len(row) < CONFIG_POLL_COL_MIN:
-            self.logger.error("Invalid poller configuration")
-            return None
         fc = row[1].lower()
         try:
             start_address = int(row[2], 0)
@@ -534,7 +559,6 @@ class ModbusHandler:
             return
         try:
             for dev in self.deviceList:
-                dev.pollSuccess = False
                 self.logger.debug(f"Polling device {dev.name} ...")
                 for p in dev.pollerList:
                     if not p.disabled:
@@ -716,6 +740,7 @@ def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
             mqtt_diagnostics_topic_pattern=args.mqtt_diagnostics_topic_pattern,
             mqtt_single_publish=args.mqtt_single,
             autoremove=args.autoremove,
+            csv_delimiter_code=args.csv_delimiter,
         )
         if modbus_handler.load_config():
             modbus_handlers.append(modbus_handler)

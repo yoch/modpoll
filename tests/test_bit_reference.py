@@ -266,3 +266,32 @@ def test_bit_syntax_rejected_on_coil_poller_during_config_load():
     assert len(devices[0].pollerList) == 1
     assert len(devices[0].pollerList[0].readableReferences) == 0
     assert len(devices[0].references) == 0
+
+
+def test_tab_delimited_config_loads_with_tab_code():
+    import io
+
+    config = "\n".join(
+        [
+            "device\tdev\t1",
+            "poll\tholding_register\t0\t1\tBE_BE",
+            "ref\tv\t0\tuint16\tr",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused", csv_delimiter_code="tab")
+    devices = handler._parse_config(
+        csv.reader(io.StringIO(config), delimiter=handler.csv_delimiter)
+    )
+    assert len(devices) == 1
+    assert len(devices[0].pollerList) == 1
+    assert "v" in devices[0].references
+
+
+def test_load_config_hints_csv_delimiter_on_misparsed_file(caplog, tmp_path):
+    config_path = tmp_path / "bad.csv"
+    config_path.write_text("device\tdev\t1\n", encoding="utf-8")
+    handler = ModbusHandler(MagicMock(), str(config_path), csv_delimiter_code="comma")
+    with caplog.at_level("ERROR"):
+        assert handler.load_config() is False
+    assert "--csv-delimiter" in caplog.text
+    assert "comma, tab" in caplog.text

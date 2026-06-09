@@ -443,10 +443,38 @@ def test_publish_data_omits_non_finite_floats():
     assert payload == {"good": 1.5}
 
 
-def test_unknown_endian_falls_back_without_error():
-    device = Device("dev", 1)
-    poller = Poller(device, 3, 0, 1, "NOT_A_VALID_ENDIAN")
-    ref = Reference(device, "v", "0", "uint16", "r", None, None)
-    poller.add_readable_reference(ref)
-    poller.poll(FakeModbusMaster(registers=[0x1234]))
-    assert ref.val == 0x1234
+def test_invalid_endian_aborts_config_load(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,dev,1",
+            "poll,holding_register,0,1,NOT_A_VALID_ENDIAN",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("ERROR"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert devices == []
+    assert "Invalid endian" in caplog.text
+
+
+def test_duplicate_reference_name_logs_warning(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,dev,1",
+            "poll,holding_register,0,2,BE_BE",
+            "ref,dup,0,uint16,r",
+            "ref,dup,1,uint16,r",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("WARNING"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert len(devices) == 1
+    assert devices[0].references["dup"].address == 1
+    assert "Duplicate reference name 'dup'" in caplog.text
