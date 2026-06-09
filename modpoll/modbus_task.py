@@ -201,7 +201,6 @@ class Poller:
         else:
             self.failcounter += 1
             self.device.errorCount += 1
-            self.device.pollSuccess = False
 
 
 class Reference:
@@ -308,6 +307,7 @@ class ModbusHandler:
         mqtt_publish_topic_pattern: Optional[str] = None,
         mqtt_diagnostics_topic_pattern: Optional[str] = None,
         mqtt_single_publish: bool = False,
+        autoremove: bool = False,
     ):
         self.modbus_client = modbus_client
         self.config_file = config_file
@@ -318,6 +318,7 @@ class ModbusHandler:
         self.mqtt_publish_topic_pattern = mqtt_publish_topic_pattern
         self.mqtt_diagnostics_topic_pattern = mqtt_diagnostics_topic_pattern
         self.mqtt_single_publish = mqtt_single_publish
+        self.autoremove = autoremove
         self.connected = False
         self.deviceList: List[Device] = []
         self.logger = logging.getLogger(__name__)
@@ -477,15 +478,29 @@ class ModbusHandler:
             self.connected = False
 
     def poll(self):
+        for dev in self.deviceList:
+            dev.pollSuccess = False
         if not self.connect():
             self.logger.error("Failed to connect to Modbus client")
             return
         try:
             for dev in self.deviceList:
+                dev.pollSuccess = False
                 self.logger.debug(f"Polling device {dev.name} ...")
                 for p in dev.pollerList:
                     if not p.disabled:
                         p.poll(self.modbus_client)
+                        if (
+                            self.autoremove
+                            and p.failcounter >= 3
+                            and not p.disabled
+                        ):
+                            p.disabled = True
+                            self.logger.warning(
+                                f"Disabled poller for device {dev.name} "
+                                f"(fc={p.fc}, start={p.start_address}) "
+                                f"after 3 consecutive failures"
+                            )
                         if on_threading_event():
                             return
                         delay_thread(timeout=self.interval)
@@ -566,6 +581,8 @@ class ModbusHandler:
 
             payload = {}
             for ref in dev.references.values():
+                if ref.val is None:
+                    continue
                 if not on_change or ref.val != ref.last_val:
                     ref_val = (
                         round(ref.val, FLOAT_TYPE_PRECISION)
@@ -644,6 +661,7 @@ def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
             mqtt_publish_topic_pattern=args.mqtt_publish_topic_pattern,
             mqtt_diagnostics_topic_pattern=args.mqtt_diagnostics_topic_pattern,
             mqtt_single_publish=args.mqtt_single,
+            autoremove=args.autoremove,
         )
         if modbus_handler.load_config():
             modbus_handlers.append(modbus_handler)

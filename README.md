@@ -100,6 +100,14 @@ modpoll --once \
 - Serial transports: use `--serial PORT --framer ascii` (alias: `--rtu` still accepted); pyserial URLs such as `socket://host:port` and `rfc2217://host:port` work for serial-over-TCP tunnels.
 - Serial supports framers `ascii` and `rtu` (pymodbus defaults to RTU if `--framer default`). Binary framer is no longer supported in pymodbus 3.9+.
 
+### Configuration pitfalls
+
+- Use `bool8` / `bool16` on **coil** or **discrete_input** pollers only. On registers, use `bool` with `address:bit` (0-15), e.g. `40019:15,bool`.
+- For coils, `bool8` addresses are **byte indices** in the poll block (see `modsim.csv`: `0` for coils 1-8, `1` for coils 9-16).
+- `<endian>` must be exactly `BE_BE`, `LE_BE`, `LE_LE`, or `BE_LE`.
+- Leave `<scale>` empty to disable scaling; `0` is not supported as a multiplier.
+- `--autoremove` disables a poller after 3 consecutive Modbus failures on that poller.
+
 ### Prepare Modbus configure file
 
 The reason we can magically poll data from the online device *modsim* is because we have already provided the [Modbus configure file](https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv) for *modsim* device as following,

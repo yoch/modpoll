@@ -1,0 +1,321 @@
+"""Regression tests for real-world bugs and documented limitations.
+
+Fixed bugs have passing tests; known limitations (bool8 on registers) keep xfail.
+"""
+
+import json
+from unittest.mock import MagicMock
+
+import pytest
+
+from modpoll.arg_parser import get_parser
+from modpoll.modbus_task import Device, Poller, Reference, ModbusHandler
+from modpoll.mqtt_task import MqttHandler
+
+
+class FakeModbusResult:
+    def __init__(self, *, bits=None, registers=None, error=False):
+        self.bits = bits
+        self.registers = registers
+        self._error = error
+
+    def isError(self):
+        return self._error
+
+
+class FakeModbusMaster:
+    def __init__(self, *, bits=None, registers=None, fail_addresses=None):
+        self.bits = bits
+        self.registers = registers
+        self.fail_addresses = set(fail_addresses or [])
+
+    def read_coils(self, address, *, count=1, device_id=1):
+        return FakeModbusResult(bits=self.bits)
+
+    def read_discrete_inputs(self, address, *, count=1, device_id=1):
+        return FakeModbusResult(bits=self.bits)
+
+    def read_holding_registers(self, address, *, count=1, device_id=1):
+        if address in self.fail_addresses:
+            return FakeModbusResult(error=True)
+        return FakeModbusResult(registers=self.registers)
+
+    def read_input_registers(self, address, *, count=1, device_id=1):
+        if address in self.fail_addresses:
+            return FakeModbusResult(error=True)
+        return FakeModbusResult(registers=self.registers)
+
+
+def _device_with_two_register_pollers():
+    """Device with two holding-register pollers (same layout as modsim.csv)."""
+    device = Device("dev", 1)
+    p1 = Poller(device, 3, 0, 1, "BE_BE")
+    p2 = Poller(device, 3, 10, 1, "BE_BE")
+    ref1 = Reference(device, "r1", "0", "uint16", "r", None, None)
+    ref2 = Reference(device, "r2", "10", "uint16", "r", None, None)
+    p1.add_readable_reference(ref1)
+    p2.add_readable_reference(ref2)
+    device.add_reference_mapping(ref1)
+    device.add_reference_mapping(ref2)
+    device.pollerList = [p1, p2]
+    return device, ref1, ref2
+
+
+# ---------------------------------------------------------------------------
+# Fixed: pollSuccess OR semantics for multi-poller devices
+# ---------------------------------------------------------------------------
+
+
+def test_mqtt_publish_includes_device_when_first_poller_succeeds():
+    device, ref1, ref2 = _device_with_two_register_pollers()
+    master = FakeModbusMaster(registers=[0x1111], fail_addresses={10})
+
+    for poller in device.pollerList:
+        poller.poll(master)
+
+    assert ref1.val == 0x1111
+    assert ref2.val is None
+    assert device.pollSuccess is True
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="modpoll/{{device_name}}",
+    )
+    handler.deviceList = [device]
+    handler.publish_data()
+
+    assert mqtt.publish.called
+    payload = json.loads(mqtt.publish.call_args[0][1])
+    assert payload["r1"] == 0x1111
+    assert "r2" not in payload
+
+
+def test_poll_success_true_when_any_poller_succeeds():
+    device, ref1, ref2 = _device_with_two_register_pollers()
+    master = FakeModbusMaster(registers=[0x1111], fail_addresses={10})
+
+    for poller in device.pollerList:
+        poller.poll(master)
+
+    assert ref1.val == 0x1111
+    assert device.pollSuccess is True
+
+
+def test_failed_modbus_connect_clears_poll_success_and_skips_mqtt():
+    device = Device("dev", 1)
+    ref = Reference(device, "r1", "0", "uint16", "r", None, None)
+    ref.val = 42
+    device.pollSuccess = True
+    device.references = {"r1": ref}
+    device.pollerList = []
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+        daemon=True,
+    )
+    handler.deviceList = [device]
+    handler.connect = MagicMock(return_value=False)
+
+    handler.poll()
+
+    assert device.pollSuccess is False
+    handler.publish_data()
+    assert not mqtt.publish.called
+
+
+# ---------------------------------------------------------------------------
+# Fixed: MQTT publish skips None reference values
+# ---------------------------------------------------------------------------
+
+
+def test_publish_data_omits_null_reference_values():
+    device = Device("dev", 1)
+    device.pollSuccess = True
+    good = Reference(device, "good", "0", "uint16", "r", None, None)
+    good.val = 42
+    bad = Reference(device, "bad", "10", "uint16", "r", None, None)
+    bad.val = None
+    device.references = {"good": good, "bad": bad}
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+    )
+    handler.deviceList = [device]
+    handler.publish_data()
+
+    payload = json.loads(mqtt.publish.call_args[0][1])
+    assert payload == {"good": 42}
+
+
+# ---------------------------------------------------------------------------
+# Fixed: --autoremove disables poller after 3 consecutive failures
+# ---------------------------------------------------------------------------
+
+
+def test_autoremove_cli_flag_exists():
+    args = get_parser().parse_args(
+        ["--config", "dummy.csv", "--tcp", "127.0.0.1", "--autoremove"]
+    )
+    assert args.autoremove is True
+
+
+def test_autoremove_disables_poller_after_three_failures():
+    device, _, _ = _device_with_two_register_pollers()
+    master = FakeModbusMaster(registers=[0x1111], fail_addresses={10})
+
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        autoremove=True,
+        daemon=True,
+    )
+    handler.deviceList = [device]
+    handler.connect = MagicMock(return_value=True)
+    handler.disconnect = MagicMock()
+    handler.modbus_client = master
+
+    for _ in range(3):
+        handler.poll()
+
+    assert device.pollerList[0].disabled is False
+    assert device.pollerList[1].disabled is True
+
+
+def test_autoremove_without_flag_keeps_poller_enabled():
+    device = Device("dev", 1)
+    poller = Poller(device, 3, 10, 1, "BE_BE")
+    device.pollerList = [poller]
+
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        autoremove=False,
+        daemon=True,
+    )
+    handler.deviceList = [device]
+    handler.connect = MagicMock(return_value=True)
+    handler.disconnect = MagicMock()
+    handler.modbus_client = MagicMock()
+    handler.modbus_client.read_holding_registers = (
+        lambda *args, **kwargs: FakeModbusResult(error=True)
+    )
+
+    for _ in range(5):
+        handler.poll()
+
+    assert poller.disabled is False
+    assert poller.failcounter == 5
+
+
+# ---------------------------------------------------------------------------
+# Known limitation: bool8 on registers (documented, not fixed)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.xfail(
+    reason="decode_bits reads the first payload byte; 0x00FF low-byte flags decode as all False"
+)
+def test_bool8_on_holding_register_should_decode_low_byte_0x00ff():
+    device = Device("dev", 1)
+    poller = Poller(device, 3, 0, 1, "BE_BE")
+    ref = Reference(device, "flags", "0", "bool8", "r", None, None)
+    poller.add_readable_reference(ref)
+
+    master = FakeModbusMaster(registers=[0x00FF])
+    assert poller.poll(master) is True
+    assert ref.val == [True] * 8
+
+
+def test_bool8_on_holding_register_reads_high_byte_only():
+    device = Device("dev", 1)
+    poller = Poller(device, 3, 0, 1, "BE_BE")
+    ref = Reference(device, "flags", "0", "bool8", "r", None, None)
+    poller.add_readable_reference(ref)
+    poller.poll(FakeModbusMaster(registers=[0x00FF]))
+    assert ref.val == [False] * 8
+
+
+def test_bool8_on_holding_register_ignores_endian_configuration():
+    device = Device("dev", 1)
+    for endian in ("BE_BE", "LE_BE", "LE_LE", "BE_LE"):
+        poller = Poller(device, 3, 0, 1, endian)
+        ref = Reference(device, "flags", "0", "bool8", "r", None, None)
+        poller.add_readable_reference(ref)
+        poller.poll(FakeModbusMaster(registers=[0x00FF]))
+        assert ref.val == [False] * 8, endian
+
+
+def test_bool8_on_coils_and_discrete_inputs_works():
+    device = Device("dev", 1)
+    poller = Poller(device, 1, 0, 8, "BE_BE")
+    ref = Reference(device, "coil01-08", "0", "bool8", "r", None, None)
+    poller.add_readable_reference(ref)
+    poller.poll(FakeModbusMaster(bits=[True] * 8))
+    assert ref.val == [True] * 8
+
+
+# ---------------------------------------------------------------------------
+# Documented limitations (passing tests lock current behaviour)
+# ---------------------------------------------------------------------------
+
+
+def test_coil_bool_without_bit_syntax_is_undocumented_config():
+    device = Device("dev", 1)
+    poller = Poller(device, 1, 0, 8, "BE_BE")
+    ref = Reference(device, "coil0", "0", "bool", "r", None, None)
+    poller.add_readable_reference(ref)
+    poller.poll(FakeModbusMaster(bits=[True] + [False] * 7))
+    assert isinstance(ref.val, list)
+
+
+def test_reference_scale_zero_is_silently_ignored():
+    ref = Reference(Device("dev", 1), "scaled", "0", "uint16", "r", None, 0)
+    ref.update_value(100)
+    assert ref.val == 100
+
+
+def test_json_dumps_allows_nan_which_is_invalid_json():
+    dumped = json.dumps({"temperature": float("nan")})
+    assert dumped == '{"temperature": NaN}'
+
+
+def test_mqtt_connect_typeerror_propagates_instead_of_returning_false():
+    handler = MqttHandler(
+        name="test",
+        host="broker.local",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="id",
+        qos=0,
+        mqtt_version="3.1.1",
+    )
+    assert handler.setup()
+
+    def raise_type_error(**kwargs):
+        raise TypeError("unexpected keyword argument")
+
+    handler.mqtt_client.connect = raise_type_error
+
+    with pytest.raises(TypeError, match="unexpected keyword argument"):
+        handler.connect()
+
+
+def test_unknown_endian_falls_back_without_error():
+    device = Device("dev", 1)
+    poller = Poller(device, 3, 0, 1, "NOT_A_VALID_ENDIAN")
+    ref = Reference(device, "v", "0", "uint16", "r", None, None)
+    poller.add_readable_reference(ref)
+    poller.poll(FakeModbusMaster(registers=[0x1234]))
+    assert ref.val == 0x1234

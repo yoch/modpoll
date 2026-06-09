@@ -22,7 +22,10 @@
 # <dtype>: uint16/int16/uint32/int32/float16/float32/bool8/bool16/stringXXX (defaults to uint16)
 # <rw>: read/write setting e.g. r/w/rw
 # <unit> (optional): the measurement unit of reference
-# <scale> (Optional): a float value to be multiplied with actual register reading
+# <scale> (Optional): a float value to be multiplied with actual register reading; leave empty to disable scaling (0 is not supported as a multiplier)
+# <endian> must be one of BE_BE, LE_BE, LE_LE, BE_LE (typos give unpredictable results)
+# bool8/bool16: use on coil or discrete_input pollers only; address is the byte index in the poll block
+# bool with address:bit (0-15): use on holding_register or input_register pollers only
 #
 # Typical Structure
 # -----------------------------
