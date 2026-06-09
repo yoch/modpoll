@@ -190,7 +190,7 @@ class MqttHandler:
             self.mqtt_client.connect(**connect_kwargs)
             self.mqtt_client.loop_start()
             return True
-        except (OSError, MQTTException) as ex:
+        except (OSError, MQTTException, TypeError) as ex:
             self.logger.error(f"MQTT connection error: {ex}")
             return False
 

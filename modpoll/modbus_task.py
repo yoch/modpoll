@@ -129,9 +129,10 @@ class Poller:
                             )
                 self.update_statistics(True)
                 return True
-        except ModbusException:
+        except (ModbusException, OSError) as e:
             self.logger.error(
-                f"Modbus exception: {self.device.name} {self.fc} {self.start_address} {self.size}"
+                f"Modbus poll error: {self.device.name} {self.fc} "
+                f"{self.start_address} {self.size} - {e}"
             )
 
         self.update_statistics(False)
@@ -302,8 +303,9 @@ class Reference:
             if self.dtype == "bool" and self.bit is None:
                 return self.address in range(reference, size + reference)
             if self.dtype in ("bool8", "bool16"):
+                width = 16 if self.dtype == "bool16" else 8
                 group_offset = self.address - reference
-                return group_offset >= 0 and group_offset * 8 < size
+                return group_offset >= 0 and group_offset * width < size
             return False
         return self.address in range(
             reference, size + reference
@@ -670,6 +672,8 @@ class ModbusHandler:
         for dev in self.deviceList:
             dev_data = {}
             for ref in dev.references.values():
+                if isinstance(ref.val, float) and not math.isfinite(ref.val):
+                    continue
                 dev_data[ref.name] = ref.val
             if timestamp:
                 dev_data["timestamp"] = timestamp

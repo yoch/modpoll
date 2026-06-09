@@ -121,7 +121,6 @@ def app(name="modpoll"):
                 elapsed = args.rate
             else:
                 elapsed = round(now - last_check, 6)
-            last_check = now
             logger.info(
                 f" === Modpoll is polling at rate:{args.rate}s, actual:{elapsed}s ==="
             )
@@ -139,6 +138,7 @@ def app(name="modpoll"):
                         modbus_handler.export(args.export, timestamp=now)
                     else:
                         modbus_handler.export(args.export)
+            last_check = get_utc_time()
         if args.diagnostics_rate > 0 and now > last_diag + args.diagnostics_rate:
             last_diag = now
             for modbus_handler in modbus_handlers:

@@ -291,7 +291,7 @@ def test_json_dumps_allows_nan_which_is_invalid_json():
     assert dumped == '{"temperature": NaN}'
 
 
-def test_mqtt_connect_typeerror_propagates_instead_of_returning_false():
+def test_mqtt_connect_typeerror_returns_false():
     handler = MqttHandler(
         name="test",
         host="broker.local",
@@ -309,8 +309,29 @@ def test_mqtt_connect_typeerror_propagates_instead_of_returning_false():
 
     handler.mqtt_client.connect = raise_type_error
 
-    with pytest.raises(TypeError, match="unexpected keyword argument"):
-        handler.connect()
+    assert handler.connect() is False
+
+
+def test_bool16_check_sanity_requires_16_bits():
+    device = Device("dev", 1)
+    ref = Reference(device, "flags", "1", "bool16", "r", None, None)
+    assert ref.check_sanity(0, 1, fc=1) is False
+    ref_ok = Reference(device, "flags_ok", "0", "bool16", "r", None, None)
+    assert ref_ok.check_sanity(0, 16, fc=1) is True
+
+
+def test_poller_handles_oserror_on_read():
+    device = Device("dev", 1)
+    poller = Poller(device, 1, 0, 8, "BE_BE")
+    ref = Reference(device, "coil0", "0", "bool", "r", None, None)
+    poller.add_readable_reference(ref)
+
+    class MasterRaisesOSError:
+        def read_coils(self, *args, **kwargs):
+            raise OSError("connection reset")
+
+    assert poller.poll(MasterRaisesOSError()) is False
+    assert ref.val is None
 
 
 def test_poller_handles_none_result():
@@ -354,6 +375,23 @@ def test_mqtt_subscribe_pattern_rejects_prefixed_topic():
         main.extract_device_from_mqtt_topic(pattern, "modpoll/dev/set") == "dev"
     )
     assert main.extract_device_from_mqtt_topic(pattern, "xmodpoll/dev/set") is None
+
+
+def test_export_omits_non_finite_floats(tmp_path):
+    device = Device("dev", 1)
+    good = Reference(device, "good", "0", "float32", "r", None, None)
+    good.val = 1.5
+    bad = Reference(device, "nan", "2", "float32", "r", None, None)
+    bad.val = float("nan")
+    device.references = {"good": good, "nan": bad}
+
+    handler = ModbusHandler(MagicMock(), "dummy.csv")
+    handler.deviceList = [device]
+    export_file = tmp_path / "out.json"
+    handler.export(str(export_file))
+
+    data = json.loads(export_file.read_text())
+    assert data == {"dev": {"good": 1.5}}
 
 
 def test_publish_data_omits_non_finite_floats():
