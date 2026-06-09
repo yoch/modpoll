@@ -40,6 +40,18 @@ Configuration File
 
 The configuration file (`--config`) is a CSV file that defines the devices, pollers, and references to be read.
 
+Coil and discrete input references
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On ``coil`` or ``discrete_input`` pollers:
+
+- ``5,bool`` reads a **single coil/discrete input** at Modbus address 5 and publishes one boolean value.
+- ``0,bool8`` / ``0,bool16`` read a **legacy bit group** (8 or 16 booleans). With ``poll,coil,0,16``, group address ``1`` returns Modbus coil addresses 8–15 (often labeled coils 9–16 in vendor tables). If the poll ends before the full group is read, missing bits are padded with ``false``.
+- ``address:bit`` syntax is **not** supported on coil/discrete_input pollers.
+
+Register bit references
+^^^^^^^^^^^^^^^^^^^^^^^
+
 For register references (i.e., Holding or Input registers) with a ``dtype`` of ``bool``, you can specify a single bit to be extracted from the 16-bit register. This is done by appending ``:bit`` to the address, where ``bit`` is an integer from 0 to 15.
 
 - ``40110``: Reads the entire 16-bit register at address 40110.

@@ -102,8 +102,10 @@ modpoll --once \
 
 ### Configuration pitfalls
 
-- Use `bool8` / `bool16` on **coil** or **discrete_input** pollers only. On registers, use `bool` with `address:bit` (0-15), e.g. `40019:15,bool`.
-- For coils, `bool8` addresses are **byte indices** in the poll block (see `modsim.csv`: `0` for coils 1-8, `1` for coils 9-16).
+- On **coil** or **discrete_input** pollers, use `bool` with the **absolute Modbus coil address** to publish a single boolean (e.g. `ref,BP_MA,5,bool,r`).
+- Use `bool8` / `bool16` on coil/discrete_input pollers for legacy grouped reads (8 or 16 booleans per ref). The address is a **legacy group index** aligned with existing configs (`0` = first 8 coils at addresses 0–7; `1` = next 8 at addresses 8–15, i.e. coils 9–16 in 1-based tables — see `modsim.csv` `coil09-16`). If the poll ends before the full group is read, missing bits are **padded with `false`** (same for `bool8` and `bool16`).
+- On **holding_register** or **input_register** pollers, use `bool` with `address:bit` (0-15), e.g. `40019:15,bool`. The `address:bit` syntax is **not** supported on coil/discrete_input pollers.
+- `<endian>` on coil/discrete_input pollers is ignored for `bool` refs (values are read directly from `result.bits`).
 - `<endian>` must be exactly `BE_BE`, `LE_BE`, `LE_LE`, or `BE_LE`.
 - Leave `<scale>` empty to disable scaling; `0` is not supported as a multiplier.
 - `--autoremove` disables a poller after 3 consecutive Modbus failures on that poller.

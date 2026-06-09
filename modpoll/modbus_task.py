@@ -1,7 +1,6 @@
 import csv
 import json
 import logging
-import math
 from typing import List, Optional
 
 import requests
@@ -91,28 +90,22 @@ class Poller:
 
             if result and not result.isError():
                 if self.fc in (1, 2):
-                    data = result.bits
-                    decoder = self._get_decoder(data)
-                    cur_ref = self.start_address
-                    for ref in self.readableReferences:
-                        ref_count = math.ceil(self.size / 8)
-                        # skip all registers before current reference address
-                        while cur_ref < ref.address:
-                            decoder.skip_bytes(1)
-                            cur_ref += 1
-                        if cur_ref >= self.start_address + ref_count:
-                            break
+                    bits = result.bits
+                    sorted_refs = sorted(
+                        self.readableReferences, key=lambda r: r.address
+                    )
+                    for ref in sorted_refs:
                         try:
-                            self._decode_and_update_reference(ref, decoder)
-                        except UnicodeDecodeError:
+                            self._decode_coil_reference(ref, bits)
+                        except IndexError:
                             self.logger.error(
-                                f"Failed to decode unicode string for reference: {ref.name}, check the reference address or length of string in configuration file"
+                                f"Reference {ref.name} address {ref.address} is outside "
+                                f"of poller range starting at {self.start_address}"
                             )
-                        except:
+                        except Exception:
                             self.logger.error(
                                 f"Failed to decode value for reference: {ref.name}"
                             )
-                        cur_ref += ref.ref_width
                 else:  # Function codes 3 and 4
                     data = result.registers
                     # Sort refs by address to ensure predictable decoding order
@@ -151,11 +144,29 @@ class Poller:
         byteorder, wordorder = _ENDIAN_MAP.get(
             self.endian.upper(), (Endian.BIG, Endian.LITTLE)
         )
-        if self.fc in (1, 2):
-            return RegisterDecoder.from_coils(data, byteorder=byteorder)
         return RegisterDecoder.from_registers(
             data, byteorder=byteorder, wordorder=wordorder
         )
+
+    def _decode_coil_reference(self, ref: "Reference", bits: list) -> None:
+        """Decode a single reference from a coil/discrete_input poll result.
+
+        bool8/bool16 groups shorter than 8/16 bits (poll ends mid-group) are padded
+        with False to the expected width.
+        """
+        if ref.dtype == "bool" and ref.bit is None:
+            bit_offset = ref.address - self.start_address
+            ref.update_value(bool(bits[bit_offset]))
+        elif ref.dtype in ("bool8", "bool16"):
+            group_offset = ref.address - self.start_address
+            bit_offset = group_offset * 8
+            width = 8 if ref.dtype == "bool8" else 16
+            values = bits[bit_offset : bit_offset + width]
+            ref.update_value(values + [False] * (width - len(values)))
+        else:
+            raise ValueError(
+                f"Unsupported dtype '{ref.dtype}' on coil/discrete_input poller"
+            )
 
     def _decode_and_update_reference(
         self, ref: "Reference", decoder: RegisterDecoder
@@ -178,7 +189,6 @@ class Poller:
             "float32": decoder.decode_32bit_float,
             "float64": decoder.decode_64bit_float,
             "bool8": decoder.decode_bits,
-            "bool": decoder.decode_bits,
             "bool16": lambda: decoder.decode_bits() + decoder.decode_bits(),
         }
 
@@ -244,11 +254,15 @@ class Reference:
 
     def __eq__(self, other):
         if isinstance(other, Reference):
-            return self.address == other.address and self.bit == other.bit
+            return (
+                self.address == other.address
+                and self.bit == other.bit
+                and self.dtype == other.dtype
+            )
         return False
 
     def __hash__(self):
-        return hash((self.address, self.bit))
+        return hash((self.address, self.bit, self.dtype))
 
     def __repr__(self):
         addr = f"{self.address}:{self.bit}" if self.bit is not None else self.address
@@ -280,7 +294,14 @@ class Reference:
         else:
             return 1
 
-    def check_sanity(self, reference: int, size: int) -> bool:
+    def check_sanity(self, reference: int, size: int, fc: Optional[int] = None) -> bool:
+        if fc in (1, 2):
+            if self.dtype == "bool" and self.bit is None:
+                return self.address in range(reference, size + reference)
+            if self.dtype in ("bool8", "bool16"):
+                group_offset = self.address - reference
+                return group_offset >= 0 and group_offset * 8 < size
+            return False
         return self.address in range(
             reference, size + reference
         ) and self.address + self.ref_width - 1 in range(reference, size + reference)
@@ -457,10 +478,18 @@ class ModbusHandler:
         return Reference(current_device, ref_name, address, dtype, rw, unit, scale)
 
     def _validate_reference(self, ref, current_poller):
+        if current_poller.fc in (1, 2) and ref.bit is not None:
+            self.logger.warning(
+                f"Reference {ref.name}: address:bit syntax is only supported on "
+                f"holding_register/input_register pollers, ignoring it."
+            )
+            return False
         if ref in current_poller.readableReferences:
             self.logger.warning(f"Reference {ref.name} is already added, ignoring it.")
             return False
-        if not ref.check_sanity(current_poller.start_address, current_poller.size):
+        if not ref.check_sanity(
+            current_poller.start_address, current_poller.size, current_poller.fc
+        ):
             self.logger.warning(
                 f"Reference {ref.name} failed to pass sanity check, ignoring it."
             )

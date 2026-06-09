@@ -270,13 +270,13 @@ def test_bool8_on_coils_and_discrete_inputs_works():
 # ---------------------------------------------------------------------------
 
 
-def test_coil_bool_without_bit_syntax_is_undocumented_config():
+def test_coil_bool_reads_single_coil_at_modbus_address():
     device = Device("dev", 1)
     poller = Poller(device, 1, 0, 8, "BE_BE")
     ref = Reference(device, "coil0", "0", "bool", "r", None, None)
     poller.add_readable_reference(ref)
     poller.poll(FakeModbusMaster(bits=[True] + [False] * 7))
-    assert isinstance(ref.val, list)
+    assert ref.val is True
 
 
 def test_reference_scale_zero_is_silently_ignored():

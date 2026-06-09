@@ -41,6 +41,7 @@ class RegisterDecoder:
         coils: list[bool],
         byteorder=Endian.LITTLE,
     ) -> RegisterDecoder:
+        # Unused by modpoll FC1/FC2 polling (direct result.bits slicing). Kept for API parity.
         payload = b""
         if padding := len(coils) % 8:
             coils = [False] * padding + coils

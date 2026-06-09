@@ -19,13 +19,15 @@
 # <endian>: byte_order and word_order e.g. BE_BE/BE_LE/LE_LE/LE_BE
 # <ref_name>: any string without spaces to describe the reference
 # <address>: integer 0 to 65535 (the modbus address and should match the poller range)
-# <dtype>: uint16/int16/uint32/int32/float16/float32/bool8/bool16/stringXXX (defaults to uint16)
+# <dtype>: uint16/int16/uint32/int32/float16/float32/bool/bool8/bool16/stringXXX (defaults to uint16)
 # <rw>: read/write setting e.g. r/w/rw
 # <unit> (optional): the measurement unit of reference
 # <scale> (Optional): a float value to be multiplied with actual register reading; leave empty to disable scaling (0 is not supported as a multiplier)
 # <endian> must be one of BE_BE, LE_BE, LE_LE, BE_LE (typos give unpredictable results)
-# bool8/bool16: use on coil or discrete_input pollers only; address is the byte index in the poll block
-# bool with address:bit (0-15): use on holding_register or input_register pollers only
+# bool on coil/discrete_input: absolute Modbus coil address, publishes one boolean
+# bool8/bool16 on coil/discrete_input: legacy grouped reads; address is group index (0=coils 0-7, 1=coils 8-15 / "09-16" in tables)
+# if the poll ends mid-group, missing bits are padded with false (bool8 and bool16)
+# bool with address:bit (0-15): use on holding_register or input_register pollers only (not coils)
 #
 # Typical Structure
 # -----------------------------
@@ -45,7 +47,8 @@
 # -----------------------------
 device,modsim01,1,,
 poll,coil,0,12,BE_BE
-ref,coil01-08,0,bool8,rw
+ref,coil01,0,bool,rw
+ref,coil02,1,bool,rw
 ref,coil09-12,1,bool8,rw
 poll,holding_register,40000,20,BE_BE
 ref,holding_reg01,40000,uint16,rw
