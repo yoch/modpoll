@@ -37,6 +37,10 @@ def _call_with_device_id(method, *args, device_id: int, **kwargs):
     return method(*args, device_id=device_id, **kwargs)
 
 
+def _poller_identity(poller: "Poller") -> tuple:
+    return (poller.fc, poller.start_address, poller.size, poller.endian.upper())
+
+
 class Device:
     def __init__(self, device_name: str, device_id: int):
         self.name = device_name
@@ -388,6 +392,8 @@ class ModbusHandler:
         device_list = []
         current_device = None
         current_poller = None
+        seen_device_names: set = set()
+        seen_device_ids: set = set()
         try:
             for row in csv_reader:
                 if not row or all(cell.strip() == "" for cell in row):
@@ -402,6 +408,18 @@ class ModbusHandler:
                     except ValueError:
                         self.logger.error(f"Invalid device ID for {device_name}")
                         continue
+                    if device_name in seen_device_names:
+                        self.logger.error(
+                            f"Duplicate device name '{device_name}'; aborting config file"
+                        )
+                        return []
+                    if device_id in seen_device_ids:
+                        self.logger.error(
+                            f"Duplicate device ID {device_id}; aborting config file"
+                        )
+                        return []
+                    seen_device_names.add(device_name)
+                    seen_device_ids.add(device_id)
                     current_device = Device(device_name, device_id)
                     device_list.append(current_device)
                 elif "poll" in row[0].lower():
@@ -418,9 +436,22 @@ class ModbusHandler:
                             f"{', '.join(_ENDIAN_MAP.keys())}"
                         )
                         return []
-                    current_poller = self._create_poller(row, current_device)
-                    if current_poller:
-                        current_device.pollerList.append(current_poller)
+                    new_poller = self._create_poller(row, current_device)
+                    if new_poller:
+                        poller_key = _poller_identity(new_poller)
+                        if any(
+                            _poller_identity(p) == poller_key
+                            for p in current_device.pollerList
+                        ):
+                            self.logger.warning(
+                                f"Duplicate poller on device {current_device.name} "
+                                f"(fc={new_poller.fc}, start={new_poller.start_address}, "
+                                f"size={new_poller.size}, endian={new_poller.endian}); "
+                                f"ignoring it."
+                            )
+                        else:
+                            current_device.pollerList.append(new_poller)
+                            current_poller = new_poller
                 elif "ref" in row[0].lower():
                     if not current_device or not current_poller:
                         self.logger.debug(
@@ -474,6 +505,11 @@ class ModbusHandler:
         return None
 
     def _validate_poller_size(self, function_code, size):
+        if size <= 0:
+            self.logger.error(
+                f"Poller size must be greater than 0: {size}. Ignoring poller."
+            )
+            return False
         if function_code in (1, 2) and size > 2000:
             self.logger.error(
                 f"Too many coils/discrete inputs (max. 2000): {size}. Ignoring poller."
@@ -512,9 +548,18 @@ class ModbusHandler:
                 f"holding_register/input_register pollers, ignoring it."
             )
             return False
-        if ref in current_poller.readableReferences:
-            self.logger.warning(f"Reference {ref.name} is already added, ignoring it.")
-            return False
+        for poller in current_poller.device.pollerList:
+            if ref in poller.readableReferences:
+                if poller is current_poller:
+                    self.logger.warning(
+                        f"Reference {ref.name} is already added, ignoring it."
+                    )
+                else:
+                    self.logger.warning(
+                        f"Reference {ref.name} duplicates address/dtype in another "
+                        f"poller on device {current_poller.device.name}; ignoring it."
+                    )
+                return False
         if not ref.check_sanity(
             current_poller.start_address, current_poller.size, current_poller.fc
         ):

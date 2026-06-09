@@ -32,6 +32,7 @@ class MqttHandler:
         insecure: bool = False,
         mqtt_version: str = "5.0",
         log_level: str = "INFO",
+        rx_queue_size: int = 1000,
     ):
         self.name = name
         self.host = host
@@ -50,7 +51,8 @@ class MqttHandler:
 
         self.mqtt_client: Optional[MQTTClient] = None
         self.clean_start_or_session = qos == 0
-        self.rx_queue: Queue = Queue(maxsize=1000)
+        self.rx_queue_size = rx_queue_size
+        self.rx_queue: Queue = Queue(maxsize=rx_queue_size)
         self.logger = logging.getLogger(__name__)
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):

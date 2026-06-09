@@ -144,6 +144,13 @@ def get_parser():
         help="MQTT QoS value. Defaults to 0",
     )
     parser.add_argument(
+        "--mqtt-rx-queue-size",
+        type=int,
+        default=1000,
+        metavar="N",
+        help="Max MQTT subscribe messages buffered between polls (default: 1000)",
+    )
+    parser.add_argument(
         "--mqtt-user", default=None, help="Username for authentication (optional)"
     )
     parser.add_argument(

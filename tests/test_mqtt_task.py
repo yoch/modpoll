@@ -26,6 +26,21 @@ def test_mqtt_task_setup():
     mqtt_handler.close()
 
 
+def test_rx_queue_respects_configured_size():
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.emqx.io",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client_13579",
+        qos=0,
+        rx_queue_size=2,
+    )
+
+    assert handler.rx_queue._maxsize == 2
+
+
 def test_receive_empty_queue_returns_none():
     handler = MqttHandler(
         name="test_mqtt",

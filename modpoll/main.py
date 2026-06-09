@@ -68,6 +68,11 @@ def app(name="modpoll"):
                     f"{args.mqtt_subscribe_topic_pattern}"
                 )
                 exit(1)
+            if args.mqtt_rx_queue_size < 1:
+                logger.error(
+                    f"MQTT rx queue size must be at least 1: {args.mqtt_rx_queue_size}"
+                )
+                exit(1)
             mqtt_handler = MqttHandler(
                 "MqttHandler",
                 args.mqtt_host,
@@ -83,6 +88,7 @@ def app(name="modpoll"):
                 insecure=args.mqtt_insecure,
                 mqtt_version=args.mqtt_version,
                 log_level=args.loglevel,
+                rx_queue_size=args.mqtt_rx_queue_size,
             )
             if mqtt_handler.setup() and mqtt_handler.connect():
                 logger.info("Connected to MQTT broker.")

@@ -478,3 +478,103 @@ def test_duplicate_reference_name_logs_warning(caplog):
     assert len(devices) == 1
     assert devices[0].references["dup"].address == 1
     assert "Duplicate reference name 'dup'" in caplog.text
+
+
+def test_duplicate_device_name_aborts_config(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,same,1",
+            "poll,holding_register,0,1,BE_BE",
+            "device,same,2",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("ERROR"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert devices == []
+    assert "Duplicate device name 'same'" in caplog.text
+
+
+def test_duplicate_device_id_aborts_config(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,devA,1",
+            "poll,holding_register,0,1,BE_BE",
+            "device,devB,1",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("ERROR"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert devices == []
+    assert "Duplicate device ID 1" in caplog.text
+
+
+def test_duplicate_poller_skipped(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,dev,1",
+            "poll,holding_register,0,10,BE_BE",
+            "ref,first,0,uint16,r",
+            "poll,holding_register,0,10,BE_BE",
+            "ref,second,1,uint16,r",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("WARNING"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert len(devices) == 1
+    assert len(devices[0].pollerList) == 1
+    ref_names = {r.name for r in devices[0].pollerList[0].readableReferences}
+    assert ref_names == {"first", "second"}
+    assert "Duplicate poller on device dev" in caplog.text
+
+
+def test_duplicate_ref_across_pollers_ignored(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,dev,1",
+            "poll,holding_register,40000,10,BE_BE",
+            "ref,temp,40001,uint16,r",
+            "poll,holding_register,40010,5,BE_BE",
+            "ref,copy,40001,uint16,r",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("WARNING"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert len(devices) == 1
+    assert len(devices[0].pollerList) == 2
+    assert "temp" in devices[0].references
+    assert "copy" not in devices[0].references
+    assert "duplicates address/dtype in another poller" in caplog.text
+
+
+def test_poller_size_zero_ignored(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,dev,1",
+            "poll,holding_register,0,0,BE_BE",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("ERROR"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert len(devices) == 1
+    assert len(devices[0].pollerList) == 0
+    assert "Poller size must be greater than 0" in caplog.text

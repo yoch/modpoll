@@ -26,6 +26,7 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
             insecure,
             mqtt_version,
             log_level,
+            rx_queue_size=1000,
         ):
             captured["init"] = {
                 "name": name,
@@ -42,6 +43,7 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
                 "insecure": insecure,
                 "mqtt_version": mqtt_version,
                 "log_level": log_level,
+                "rx_queue_size": rx_queue_size,
             }
 
         def setup(self):
@@ -82,6 +84,8 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
             "--mqtt-version",
             "3.1.1",
             "--mqtt-insecure",
+            "--mqtt-rx-queue-size",
+            "500",
         ],
     )
 
@@ -90,6 +94,7 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
 
     assert excinfo.value.code == 0
     init_args = captured["init"]
+    assert init_args["rx_queue_size"] == 500
     assert init_args["use_tls"] is True
     assert init_args["tls_version"] == "tlsv1.2"
     assert init_args["cacerts"] == "/tmp/ca.pem"
@@ -111,6 +116,31 @@ def test_csv_delimiter_invalid_code_rejected():
                 "pipe",
             ]
         )
+
+
+def test_mqtt_rx_queue_size_zero_exits(monkeypatch, caplog):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "modpoll",
+            "--config",
+            "dummy.csv",
+            "--tcp",
+            "127.0.0.1",
+            "--mqtt-host",
+            "broker.local",
+            "--mqtt-rx-queue-size",
+            "0",
+        ],
+    )
+
+    with caplog.at_level("ERROR"):
+        with pytest.raises(SystemExit) as excinfo:
+            main.app()
+
+    assert excinfo.value.code == 1
+    assert "MQTT rx queue size must be at least 1" in caplog.text
 
 
 def test_mqtt_subscribe_pattern_without_plus_exits(monkeypatch):
