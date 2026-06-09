@@ -1,4 +1,5 @@
 import sys
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -181,7 +182,9 @@ def test_mqtt_setup_close_errors_are_suppressed(monkeypatch):
             raise RuntimeError("close exploded")
 
     monkeypatch.setattr(main, "MqttHandler", FakeMqttHandler)
-    monkeypatch.setattr(main, "setup_modbus_handlers", lambda args, mqtt_handler: [])
+    monkeypatch.setattr(
+        main, "setup_modbus_handlers", lambda args, mqtt_handler: (MagicMock(), [])
+    )
     monkeypatch.setattr(
         sys,
         "argv",

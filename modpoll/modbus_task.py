@@ -353,7 +353,6 @@ class ModbusHandler:
         self.mqtt_diagnostics_topic_pattern = mqtt_diagnostics_topic_pattern
         self.mqtt_single_publish = mqtt_single_publish
         self.autoremove = autoremove
-        self.connected = False
         self.deviceList: List[Device] = []
         self.logger = logging.getLogger(__name__)
 
@@ -569,64 +568,48 @@ class ModbusHandler:
             return False
         return True
 
-    def connect(self) -> bool:
-        try:
-            if not self.connected:
-                self.connected = self.modbus_client.connect()
-        except (ModbusException, OSError) as e:
-            self.logger.error(f"Modbus connect failed: {e}")
-            self.connected = False
-        return self.connected
-
-    def disconnect(self):
-        if self.modbus_client and self.connected:
-            self.modbus_client.close()
-            self.connected = False
-
-    def poll(self):
+    def _begin_poll_cycle(self):
         for dev in self.deviceList:
             dev.pollSuccess = False
-        if not self.connect():
-            self.logger.error("Failed to connect to Modbus client")
-            for dev in self.deviceList:
-                for p in dev.pollerList:
-                    if not p.disabled:
-                        p.update_statistics(False)
-                        if self.autoremove and p.failcounter >= 3:
-                            p.disabled = True
-                            self.logger.warning(
-                                f"Disabled poller for device {dev.name} "
-                                f"(fc={p.fc}, start={p.start_address}) "
-                                f"after 3 consecutive failures"
-                            )
-            return
-        try:
-            for dev in self.deviceList:
-                self.logger.debug(f"Polling device {dev.name} ...")
-                for p in dev.pollerList:
-                    if not p.disabled:
-                        p.poll(self.modbus_client)
-                        if self.autoremove and p.failcounter >= 3:
-                            p.disabled = True
-                            self.logger.warning(
-                                f"Disabled poller for device {dev.name} "
-                                f"(fc={p.fc}, start={p.start_address}) "
-                                f"after 3 consecutive failures"
-                            )
-                        if on_threading_event():
-                            return
-                        delay_thread(timeout=self.interval)
-        finally:
-            self.disconnect()
-            if not self.daemon:
-                self.print_results()
+
+    def _maybe_disable_poller(self, dev, poller):
+        if self.autoremove and poller.failcounter >= 3:
+            poller.disabled = True
+            self.logger.warning(
+                f"Disabled poller for device {dev.name} "
+                f"(fc={poller.fc}, start={poller.start_address}) "
+                f"after 3 consecutive failures"
+            )
+
+    def _record_poll_failure(self):
+        for dev in self.deviceList:
+            for p in dev.pollerList:
+                if not p.disabled:
+                    p.update_statistics(False)
+                    self._maybe_disable_poller(dev, p)
+
+    def on_connect_failure(self):
+        self._begin_poll_cycle()
+        self._record_poll_failure()
+
+    def poll(self):
+        self._begin_poll_cycle()
+        for dev in self.deviceList:
+            self.logger.debug(f"Polling device {dev.name} ...")
+            for p in dev.pollerList:
+                if not p.disabled:
+                    p.poll(self.modbus_client)
+                    self._maybe_disable_poller(dev, p)
+                    if on_threading_event():
+                        return
+                    delay_thread(timeout=self.interval)
+        if not self.daemon:
+            self.print_results()
 
     def write_coil(self, device_name: str, address: int, value) -> bool:
         for dev in self.deviceList:
             if dev.name == device_name:
                 try:
-                    if not self.connect():
-                        return False
                     result = _call_with_device_id(
                         self.modbus_client.write_coil,
                         address,
@@ -644,8 +627,6 @@ class ModbusHandler:
         for dev in self.deviceList:
             if dev.name == device_name:
                 try:
-                    if not self.connect():
-                        return False
                     result = _call_with_device_id(
                         self.modbus_client.write_register,
                         address,
@@ -760,11 +741,26 @@ class ModbusHandler:
         except IOError as e:
             self.logger.error(f"Error exporting data: {e}")
 
-    def close(self):
-        self.disconnect()
-
     def get_device_list(self) -> List[Device]:
         return self.deviceList
+
+
+def modbus_connect(client) -> bool:
+    try:
+        return client.connect()
+    except (ModbusException, OSError) as e:
+        logging.getLogger(__name__).error(f"Modbus connect failed: {e}")
+        return False
+
+
+def modbus_close(client) -> None:
+    if client:
+        try:
+            client.close()
+        except (ModbusException, OSError) as e:
+            logging.getLogger(__name__).debug(
+                f"Ignoring Modbus close error during shutdown: {e}"
+            )
 
 
 def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
@@ -786,9 +782,7 @@ def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
         )
         if modbus_handler.load_config():
             modbus_handlers.append(modbus_handler)
-        else:
-            modbus_handler.close()
-    return modbus_handlers
+    return modbus_client, modbus_handlers
 
 
 def _create_modbus_client(args):

@@ -6,7 +6,7 @@ import sys
 
 from .arg_parser import get_parser
 from .mqtt_task import MqttHandler
-from .modbus_task import setup_modbus_handlers
+from .modbus_task import setup_modbus_handlers, modbus_connect, modbus_close
 
 from . import __version__
 from .utils import set_threading_event, delay_thread, on_threading_event, get_utc_time
@@ -37,6 +37,7 @@ def setup_logging(level, format):
 
 def app(name="modpoll"):
     mqtt_handler = None
+    modbus_client = None
     modbus_handlers = []
 
     print(
@@ -113,7 +114,7 @@ def app(name="modpoll"):
             exit(1)
 
     # setup modbus tasks
-    modbus_handlers = setup_modbus_handlers(args, mqtt_handler)
+    modbus_client, modbus_handlers = setup_modbus_handlers(args, mqtt_handler)
     if modbus_handlers:
         logger.info(f"Loaded {len(modbus_handlers)} Modbus config(s).")
         delay_thread(args.delay)
@@ -137,8 +138,18 @@ def app(name="modpoll"):
             logger.info(
                 f" === Modpoll is polling at rate:{args.rate}s, actual:{elapsed}s ==="
             )
+            if not modbus_connect(modbus_client):
+                for modbus_handler in modbus_handlers:
+                    modbus_handler.on_connect_failure()
+            else:
+                try:
+                    for modbus_handler in modbus_handlers:
+                        modbus_handler.poll()
+                        if on_threading_event():
+                            break
+                finally:
+                    modbus_close(modbus_client)
             for modbus_handler in modbus_handlers:
-                modbus_handler.poll()
                 if on_threading_event():
                     break
                 if args.mqtt_host:
@@ -189,14 +200,15 @@ def app(name="modpoll"):
                             ]:
                                 device_found = True
                                 write_success = False
-                                if object_type == "coil":
-                                    write_success = modbus_handler.write_coil(
-                                        device_name, address, value
-                                    )
-                                elif object_type == "holding_register":
-                                    write_success = modbus_handler.write_register(
-                                        device_name, address, value
-                                    )
+                                if modbus_connect(modbus_client):
+                                    if object_type == "coil":
+                                        write_success = modbus_handler.write_coil(
+                                            device_name, address, value
+                                        )
+                                    elif object_type == "holding_register":
+                                        write_success = modbus_handler.write_register(
+                                            device_name, address, value
+                                        )
 
                                 if write_success:
                                     logger.info(
@@ -224,8 +236,7 @@ def app(name="modpoll"):
         remaining = last_check + args.rate - get_utc_time()
         delay_thread(min(max(remaining, 0.01), 0.5))
 
-    for modbus_handler in modbus_handlers:
-        modbus_handler.close()
+    modbus_close(modbus_client)
     if mqtt_handler:
         mqtt_handler.close()
 

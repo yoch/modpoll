@@ -120,9 +120,8 @@ def test_failed_modbus_connect_clears_poll_success_and_skips_mqtt():
         daemon=True,
     )
     handler.deviceList = [device]
-    handler.connect = MagicMock(return_value=False)
 
-    handler.poll()
+    handler.on_connect_failure()
 
     assert device.pollSuccess is False
     handler.publish_data()
@@ -180,8 +179,6 @@ def test_autoremove_disables_poller_after_three_failures():
         daemon=True,
     )
     handler.deviceList = [device]
-    handler.connect = MagicMock(return_value=True)
-    handler.disconnect = MagicMock()
     handler.modbus_client = master
 
     for _ in range(3):
@@ -203,8 +200,6 @@ def test_autoremove_without_flag_keeps_poller_enabled():
         daemon=True,
     )
     handler.deviceList = [device]
-    handler.connect = MagicMock(return_value=True)
-    handler.disconnect = MagicMock()
     handler.modbus_client = MagicMock()
     handler.modbus_client.read_holding_registers = (
         lambda *args, **kwargs: FakeModbusResult(error=True)
@@ -360,11 +355,9 @@ def test_autoremove_on_connect_failure():
         daemon=True,
     )
     handler.deviceList = [device]
-    handler.connect = MagicMock(return_value=False)
-    handler.disconnect = MagicMock()
 
     for _ in range(3):
-        handler.poll()
+        handler.on_connect_failure()
 
     assert poller.disabled is True
 

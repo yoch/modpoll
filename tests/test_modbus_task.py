@@ -1,6 +1,6 @@
 import pytest  # type: ignore
 from modpoll.arg_parser import get_parser
-from modpoll.modbus_task import setup_modbus_handlers
+from modpoll.modbus_task import setup_modbus_handlers, modbus_connect, modbus_close
 
 
 @pytest.mark.integration
@@ -15,7 +15,7 @@ def test_modbus_task_modbus_setup():
             "modsim.topmaker.net",
         ]
     )
-    modbus_handlers = setup_modbus_handlers(args)
+    _modbus_client, modbus_handlers = setup_modbus_handlers(args)
     assert len(modbus_handlers) == 2
 
 
@@ -30,12 +30,15 @@ def test_modbus_task_poll_modsim():
             "modsim.topmaker.net",
         ]
     )
-    modbus_handlers = setup_modbus_handlers(args)
+    modbus_client, modbus_handlers = setup_modbus_handlers(args)
     modbus_handler = modbus_handlers[0]
 
-    assert modbus_handler.connect()
+    assert modbus_connect(modbus_client)
 
-    modbus_handler.poll()
+    try:
+        modbus_handler.poll()
+    finally:
+        modbus_close(modbus_client)
 
     # Check if any data was collected
     assert len(modbus_handler.deviceList) > 0
@@ -45,6 +48,3 @@ def test_modbus_task_poll_modsim():
     assert any(
         ref.val is not None for ref in modbus_handler.deviceList[0].references.values()
     )
-
-    modbus_handler.disconnect()
-    modbus_handler.close()
