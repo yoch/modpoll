@@ -394,6 +394,32 @@ def test_export_omits_non_finite_floats(tmp_path):
     assert data == {"dev": {"good": 1.5}}
 
 
+def test_mqtt_single_publishes_bool_as_json():
+    device = Device("dev", 1)
+    device.pollSuccess = True
+    bool_ref = Reference(device, "flag", "0", "bool", "r", None, None)
+    bool_ref.val = True
+    list_ref = Reference(device, "flags", "1", "bool8", "r", None, None)
+    list_ref.val = [True, False]
+    device.references = {"flag": bool_ref, "flags": list_ref}
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+        mqtt_single_publish=True,
+    )
+    handler.deviceList = [device]
+    handler.publish_data()
+
+    published = {call[0][0]: call[0][1] for call in mqtt.publish.call_args_list}
+    assert published["t/dev/flag"] == "true"
+    assert published["t/dev/flags/0"] == "true"
+    assert published["t/dev/flags/1"] == "false"
+
+
 def test_publish_data_omits_non_finite_floats():
     device = Device("dev", 1)
     device.pollSuccess = True

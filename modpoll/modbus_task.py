@@ -639,9 +639,19 @@ class ModbusHandler:
                         topic = f"{self.mqtt_publish_topic_pattern.replace('{{device_name}}', dev.name)}/{ref.name}"
                         if isinstance(ref_val, list):
                             for i, entry in enumerate(ref_val):
-                                self.mqtt_handler.publish(f"{topic}/{i}", entry)
+                                msg = (
+                                    json.dumps(entry)
+                                    if isinstance(entry, bool)
+                                    else entry
+                                )
+                                self.mqtt_handler.publish(f"{topic}/{i}", msg)
                         else:
-                            self.mqtt_handler.publish(topic, ref_val)
+                            msg = (
+                                json.dumps(ref_val)
+                                if isinstance(ref_val, bool)
+                                else ref_val
+                            )
+                            self.mqtt_handler.publish(topic, msg)
 
             if payload and not self.mqtt_single_publish:
                 if timestamp is not None:

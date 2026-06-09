@@ -70,11 +70,11 @@ class MqttHandler:
                 self.logger.info("MQTT session present, reusing existing session")
             else:
                 self.logger.info("Created new MQTT session.")
-                for topic in self.subscribe_topics:
-                    self.logger.info(
-                        f"Subscribe to topic: {topic} with QoS: {self.qos}"
-                    )
-                    client.subscribe(topic, self.qos)
+            for topic in self.subscribe_topics:
+                self.logger.info(
+                    f"Subscribe to topic: {topic} with QoS: {self.qos}"
+                )
+                client.subscribe(topic, self.qos)
         else:
             self.logger.warning(f"Connection failed with reason code: {rc}")
 
@@ -112,14 +112,23 @@ class MqttHandler:
     def _on_log(self, client, userdata, level, buf):
         self.logger.debug(f"{level} | {buf}")
 
-    def _setup_tls(self):
+    def _setup_tls(self) -> bool:
         try:
             tls_versions = {
-                "tlsv1.2": ssl.PROTOCOL_TLSv1_2,
-                "tlsv1.1": ssl.PROTOCOL_TLSv1_1,
-                "tlsv1": ssl.PROTOCOL_TLSv1,
+                "tlsv1.2": getattr(ssl, "PROTOCOL_TLSv1_2", None),
+                "tlsv1.1": getattr(ssl, "PROTOCOL_TLSv1_1", None),
+                "tlsv1": getattr(ssl, "PROTOCOL_TLSv1", None),
             }
-            tlsVersion = tls_versions.get(self.tls_version.lower(), ssl.PROTOCOL_TLS)
+            key = self.tls_version.lower()
+            if key in tls_versions:
+                tlsVersion = tls_versions[key]
+                if tlsVersion is None:
+                    self.logger.error(
+                        f"TLS version '{self.tls_version}' is not supported on this Python"
+                    )
+                    return False
+            else:
+                tlsVersion = ssl.PROTOCOL_TLS
             cert_required = ssl.CERT_NONE if self.insecure else ssl.CERT_REQUIRED
             self.mqtt_client.tls_set(
                 ca_certs=self.cacerts,
@@ -129,6 +138,7 @@ class MqttHandler:
                 tls_version=tlsVersion,
                 ciphers=None,
             )
+            return True
         except ssl.SSLError as ssl_ex:
             self.logger.error(f"SSL setup error: {ssl_ex}")
             raise
@@ -154,8 +164,8 @@ class MqttHandler:
                     protocol=MQTTProtocolVersion.MQTTv311,
                 )
 
-            if self.use_tls:
-                self._setup_tls()
+            if self.use_tls and not self._setup_tls():
+                return False
 
             if self.user:
                 self.mqtt_client.username_pw_set(self.user, self.password)

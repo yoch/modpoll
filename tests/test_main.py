@@ -97,6 +97,29 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
     assert init_args["subscribe_topics"] == ["modpoll/+/set"]
 
 
+def test_mqtt_subscribe_pattern_without_plus_exits(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "modpoll",
+            "--config",
+            "dummy.csv",
+            "--tcp",
+            "127.0.0.1",
+            "--mqtt-host",
+            "broker.local",
+            "--mqtt-subscribe-topic-pattern",
+            "modpoll/{{device_name}}/set",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main.app()
+
+    assert excinfo.value.code == 1
+
+
 def test_mqtt_setup_close_errors_are_suppressed(monkeypatch):
     class FakeMqttHandler:
         def __init__(self, *args, **kwargs):

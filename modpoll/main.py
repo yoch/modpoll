@@ -61,6 +61,13 @@ def app(name="modpoll"):
     else:
         logger.info(f"Setup MQTT connection to {args.mqtt_host}:{args.mqtt_port}")
         try:
+            if "+" not in args.mqtt_subscribe_topic_pattern:
+                logger.error(
+                    "MQTT subscribe pattern must contain '+' wildcard, not "
+                    "'{{device_name}}': "
+                    f"{args.mqtt_subscribe_topic_pattern}"
+                )
+                exit(1)
             mqtt_handler = MqttHandler(
                 "MqttHandler",
                 args.mqtt_host,
@@ -208,7 +215,8 @@ def app(name="modpoll"):
             set_threading_event()
             break
 
-        delay_thread(0.01)
+        remaining = last_check + args.rate - get_utc_time()
+        delay_thread(min(max(remaining, 0.01), 0.5))
 
     for modbus_handler in modbus_handlers:
         modbus_handler.close()

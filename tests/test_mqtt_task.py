@@ -101,6 +101,29 @@ def test_publish_when_connected_calls_client_publish():
     assert stub.calls == [("topic", "message", 2, True)]
 
 
+def test_mqtt_tlsv1_unsupported_returns_false_from_setup(monkeypatch):
+    import ssl
+
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.emqx.io",
+        port=8883,
+        user=None,
+        password=None,
+        clientid="client",
+        qos=0,
+        use_tls=True,
+        tls_version="tlsv1",
+        cacerts="/tmp/ca.pem",
+        mqtt_version="3.1.1",
+    )
+
+    if hasattr(ssl, "PROTOCOL_TLSv1"):
+        monkeypatch.delattr(ssl, "PROTOCOL_TLSv1", raising=False)
+
+    assert handler.setup() is False
+
+
 def test_setup_respects_tls_option(monkeypatch):
     called = {}
     handler = MqttHandler(
@@ -119,6 +142,7 @@ def test_setup_respects_tls_option(monkeypatch):
 
     def fake_setup_tls():
         called["tls"] = True
+        return True
 
     monkeypatch.setattr(handler, "_setup_tls", fake_setup_tls)
 
