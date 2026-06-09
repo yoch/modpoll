@@ -44,9 +44,6 @@ def app(name="modpoll"):
         flush=True,
     )
 
-    signal.signal(signal.SIGINT, _signal_handler)
-    signal.signal(signal.SIGTERM, _signal_handler)
-
     # parse args
     args = get_parser().parse_args()
 
@@ -54,6 +51,9 @@ def app(name="modpoll"):
     setup_logging(args.loglevel, LOG_SIMPLE)
     global logger
     logger = logging.getLogger(__name__)
+
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
 
     # setup mqtt
     if not args.mqtt_host:
