@@ -1,8 +1,13 @@
-# Publish to PyPI and deploy docs — only when a GitHub Release is published,
-# or when started manually (workflow_dispatch).
+# Publish to PyPI and deploy docs when a version tag is pushed, a GitHub Release
+# is published, or manually (workflow_dispatch).
+#
+# Prefer `git push origin vX.Y.Z` after the release commit.
 name: release-main
 
 on:
+  push:
+    tags:
+      - "v*"
   release:
     types: [published]
   workflow_dispatch:
@@ -13,6 +18,7 @@ concurrency:
 
 jobs:
   build-and-publish-pypi:
+    if: github.repository == 'yoch/modpoll2mqtt'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,6 +36,8 @@ jobs:
           source .venv/bin/activate
           if [[ "${{ github.event_name }}" == "release" ]]; then
             TAG="${{ github.event.release.tag_name }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
           else
             TAG="v$(poetry version -s)"
           fi
@@ -51,6 +59,7 @@ jobs:
           packages-dir: dist/
 
   deploy-docs:
+    if: github.repository == 'yoch/modpoll2mqtt'
     needs: build-and-publish-pypi
     runs-on: ubuntu-latest
     permissions:

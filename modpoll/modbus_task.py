@@ -687,9 +687,7 @@ class ModbusHandler:
                 delay_thread(interval)
 
         if ok_count:
-            self.logger.info(
-                f"Wrote {ok_count} value(s) for device={device_name}"
-            )
+            self.logger.info(f"Wrote {ok_count} value(s) for device={device_name}")
 
     def print_results(self):
         for dev in self.deviceList:

@@ -9,6 +9,20 @@ homepage = "https://github.com/yoch/modpoll2mqtt"
 readme = "README.md"
 packages = [{ include = "modpoll" }]
 license = "MIT"
+keywords = [
+    "modbus",
+    "modpoll",
+    "mqtt",
+    "gateway",
+    "bridge",
+    "iot",
+    "industrial-automation",
+    "building-automation",
+    "modbus-tcp",
+    "modbus-rtu",
+    "modbus-udp",
+    "cli",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

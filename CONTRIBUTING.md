@@ -65,11 +65,17 @@ Here we assume you already have `python`, `poetry`, and `Git` installed. Otherwi
 
 4. Don't forget to add test cases for your added functionality in the `tests` directory.
 
-5. When you're done making changes, check that your changes pass the formatting tests,
+5. **Before every commit**, run the same quality checks as CI (`quality-check` job in
+   [`.github/workflows/main.yml`](.github/workflows/main.yml)). A skipped `make check`
+   locally often means a red CI run (e.g. `black` reformatting `modpoll/modbus_task.py`).
 
     ```bash
     make check
     ```
+
+    `make install` registers pre-commit hooks that catch many issues at commit time, but
+    they do not replace a full `make check` (deptry, poetry lock, etc.). Re-run
+    `make check` after fixing hook failures and before `git commit --amend`.
 
     Then, validate that all unit tests are passing:
 
@@ -94,19 +100,18 @@ Here we assume you already have `python`, `poetry`, and `Git` installed. Otherwi
 PyPI publish and the public documentation site are **not** updated on ordinary pushes to `main`.
 They run only when:
 
-1. A **GitHub Release is published** (tag `vX.Y.Z`), which triggers [`.github/workflows/on-release-main.yml`](.github/workflows/on-release-main.yml), or
+1. A **version tag** `vX.Y.Z` is pushed, or a **GitHub Release is published** — both trigger [`.github/workflows/on-release-main.yml`](.github/workflows/on-release-main.yml), or
 2. That workflow is started **manually** from the Actions tab (`workflow_dispatch`).
 
 The workflow publishes the package to PyPI (trusted publisher / OIDC) and deploys Sphinx output to the `gh-pages` branch.
 
 ### Typical release flow
 
-**With release-please** (optional automation): merge the release-please PR on `main`; when the GitHub Release is published, publish + docs run automatically.
-
-**Manual release:**
-
 ```bash
-# bump version in pyproject.toml, update CHANGELOG.md, commit, push
+# bump version in pyproject.toml, update CHANGELOG.md, commit, push main
+git tag vX.Y.Z
+git push origin main
+git push origin vX.Y.Z
 gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG-excerpt.md
 ```
 

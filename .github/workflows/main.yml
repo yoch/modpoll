@@ -1,3 +1,5 @@
+# CI on push/PR to main. On a fork, enable Actions once under
+# Settings → Actions → General if workflows never start automatically.
 name: main
 
 on:
