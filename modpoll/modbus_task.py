@@ -10,7 +10,8 @@ from pymodbus.client import ModbusSerialClient, ModbusTcpClient, ModbusUdpClient
 from pymodbus.exceptions import ModbusException
 from pymodbus.framer import FramerType
 
-from .register_decode import Endian, RegisterDecoder
+from .register_decode import ENDIAN_MAP, Endian, RegisterDecoder
+from .reference_write import write_reference as _write_reference
 from .utils import on_threading_event, delay_thread
 from .mqtt_task import MqttHandler
 
@@ -22,13 +23,6 @@ _modbus_connect_failures = 0
 CONFIG_DEVICE_COL_MIN = 3
 CONFIG_POLL_COL_MIN = 5
 CONFIG_REF_COL_MIN = 5
-
-_ENDIAN_MAP = {
-    "BE_BE": (Endian.BIG, Endian.BIG),
-    "LE_BE": (Endian.LITTLE, Endian.BIG),
-    "LE_LE": (Endian.LITTLE, Endian.LITTLE),
-    "BE_LE": (Endian.BIG, Endian.LITTLE),
-}
 
 CSV_DELIMITER_CODES = {
     "comma": ",",
@@ -187,11 +181,14 @@ class Poller:
             ref.update_value(None)
         return False
 
-    def _get_decoder(self, data):
-        byteorder, wordorder = _ENDIAN_MAP[self.endian.strip().upper()]
+    def get_decoder(self, data):
+        byteorder, wordorder = ENDIAN_MAP[self.endian.strip().upper()]
         return RegisterDecoder.from_registers(
             data, byteorder=byteorder, wordorder=wordorder
         )
+
+    def _get_decoder(self, data):
+        return self.get_decoder(data)
 
     def _decode_coil_reference(self, ref: "Reference", bits: list) -> None:
         """Decode a single reference from a coil/discrete_input poll result.
@@ -460,10 +457,10 @@ class ModbusHandler:
                         self.logger.error("Invalid poller configuration")
                         return []
                     endian_key = row[4].strip().upper()
-                    if endian_key not in _ENDIAN_MAP:
+                    if endian_key not in ENDIAN_MAP:
                         self.logger.error(
                             f"Invalid endian '{row[4].strip()}'; must be one of: "
-                            f"{', '.join(_ENDIAN_MAP.keys())}"
+                            f"{', '.join(ENDIAN_MAP.keys())}"
                         )
                         return []
                     new_poller = self._create_poller(row, current_device)
@@ -493,10 +490,11 @@ class ModbusHandler:
                         if "r" in ref.rw.lower():
                             current_poller.add_readable_reference(ref)
                         if ref.name in current_device.references:
-                            self.logger.warning(
+                            self.logger.error(
                                 f"Duplicate reference name '{ref.name}' on device "
-                                f"{current_device.name}; overwriting previous entry"
+                                f"{current_device.name}; aborting config file"
                             )
+                            return []
                         current_device.add_reference_mapping(ref)
                         self.logger.debug(
                             f"Add reference {ref.name} to device {current_device.name}"
@@ -638,39 +636,11 @@ class ModbusHandler:
         if not self.daemon:
             self.print_results()
 
-    def write_coil(self, device_name: str, address: int, value) -> bool:
-        for dev in self.deviceList:
-            if dev.name == device_name:
-                try:
-                    result = _call_with_device_id(
-                        self.modbus_client.write_coil,
-                        address,
-                        value,
-                        device_id=dev.devid,
-                    )
-                    return result is not None and not result.isError()
-                except ModbusException as e:
-                    self.logger.error(f"Error writing coil: {e}")
-                    return False
-        self.logger.error(f"Device {device_name} not found")
-        return False
+    def has_device(self, device_name: str) -> bool:
+        return any(d.name == device_name for d in self.deviceList)
 
-    def write_register(self, device_name, address: int, value) -> bool:
-        for dev in self.deviceList:
-            if dev.name == device_name:
-                try:
-                    result = _call_with_device_id(
-                        self.modbus_client.write_register,
-                        address,
-                        value,
-                        device_id=dev.devid,
-                    )
-                    return result is not None and not result.isError()
-                except ModbusException as e:
-                    self.logger.error(f"Error writing register: {e}")
-                    return False
-        self.logger.error(f"Device {device_name} not found")
-        return False
+    def write_reference(self, device_name: str, ref_name: str, value) -> bool:
+        return _write_reference(self, device_name, ref_name, value)
 
     def print_results(self):
         for dev in self.deviceList:

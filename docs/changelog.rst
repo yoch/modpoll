@@ -1,6 +1,24 @@
 Changelog
 =========
 
+`1.7.0 <https://github.com/gavinying/modpoll/compare/v1.6.0...v1.7.0>`__ (2026-06-10)
+-------------------------------------------------------------------------------------
+
+Features
+~~~~~~~~
+
+- Semantic MQTT write by CSV reference on ``modpoll/<device>/set`` with payload
+  ``ref`` and ``value`` (device from topic; scale, dtype, and endianness handled
+  automatically)
+- Subscribe pattern ``modpoll/+/set`` by default
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Removed low-level MQTT write format (``object_type``, ``address``, ``value``);
+  use topic + ``ref`` and ``value`` instead
+- Duplicate reference names on the same device now abort config loading
+
 `1.5.1 <https://github.com/gavinying/modpoll/compare/v1.5.0...v1.5.1>`__ (2025-09-29)
 -------------------------------------------------------------------------------------
 

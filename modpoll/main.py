@@ -64,9 +64,8 @@ def app(name="modpoll"):
         try:
             if "+" not in args.mqtt_subscribe_topic_pattern:
                 logger.error(
-                    "MQTT subscribe pattern must contain '+' wildcard, not "
-                    "'{{device_name}}': "
-                    f"{args.mqtt_subscribe_topic_pattern}"
+                    "MQTT subscribe pattern must contain '+' wildcard for the device "
+                    f"name segment: {args.mqtt_subscribe_topic_pattern}"
                 )
                 exit(1)
             if args.mqtt_rx_queue_size < 1:
@@ -183,57 +182,64 @@ def app(name="modpoll"):
                         f"{args.mqtt_subscribe_topic_pattern}"
                     )
                     continue
-                if device_name:
-                    logger.info(
-                        f"Received request to write data for device {device_name}"
-                    )
-                    try:
-                        reg = json.loads(payload)
-                        object_type = reg["object_type"]
-                        address = reg["address"]
-                        value = reg["value"]
-
-                        device_found = False
-                        for modbus_handler in modbus_handlers:
-                            if device_name in [
-                                dev.name for dev in modbus_handler.get_device_list()
-                            ]:
-                                device_found = True
-                                write_success = False
-                                if modbus_connect(modbus_client):
-                                    try:
-                                        if object_type == "coil":
-                                            write_success = modbus_handler.write_coil(
-                                                device_name, address, value
-                                            )
-                                        elif object_type == "holding_register":
-                                            write_success = (
-                                                modbus_handler.write_register(
-                                                    device_name, address, value
-                                                )
-                                            )
-                                    finally:
-                                        modbus_close(modbus_client)
-
-                                if write_success:
-                                    logger.info(
-                                        f"Successfully wrote {object_type}: device={device_name}, address={address}, value={value}"
-                                    )
-                                else:
-                                    logger.warning(
-                                        f"Failed to write {object_type}: device={device_name}, address={address}, value={value}"
-                                    )
-                                break
-
-                        if not device_found:
-                            logger.error(f"No device found with name: {device_name}")
-
-                    except KeyError as e:
-                        logger.error(f"Missing required key in payload: {e}")
-                    except json.JSONDecodeError:
-                        logger.error(f"Failed to parse JSON message: {payload}")
-                else:
+                if not device_name:
                     logger.error(f"Failed to extract device name from topic: {topic}")
+                    continue
+
+                try:
+                    command = json.loads(payload)
+                    ref_name = command["ref"]
+                    value = command["value"]
+                except KeyError as e:
+                    logger.error(f"Missing required key in payload: {e}")
+                    continue
+                except json.JSONDecodeError:
+                    logger.error(f"Failed to parse JSON message: {payload}")
+                    continue
+
+                if "device" in command:
+                    logger.debug(
+                        "Ignoring 'device' in write payload; device is taken from topic"
+                    )
+
+                logger.info(
+                    f"Received write request for device={device_name}, ref={ref_name}"
+                )
+                device_found = False
+                write_success = False
+                connect_failed = False
+                for modbus_handler in modbus_handlers:
+                    if not modbus_handler.has_device(device_name):
+                        continue
+                    device_found = True
+                    if not modbus_connect(modbus_client):
+                        connect_failed = True
+                    else:
+                        try:
+                            write_success = modbus_handler.write_reference(
+                                device_name, ref_name, value
+                            )
+                        finally:
+                            modbus_close(modbus_client)
+                    break
+
+                if not device_found:
+                    logger.error(f"No device found with name: {device_name}")
+                elif connect_failed:
+                    logger.error(
+                        f"Modbus connect failed for write: device={device_name}, "
+                        f"ref={ref_name}"
+                    )
+                elif write_success:
+                    logger.info(
+                        f"Successfully wrote device={device_name}, ref={ref_name}, "
+                        f"value={value}"
+                    )
+                else:
+                    logger.warning(
+                        f"Failed to write device={device_name}, ref={ref_name}, "
+                        f"value={value}"
+                    )
         if args.once:
             set_threading_event()
             break

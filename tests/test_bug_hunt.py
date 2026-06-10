@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from modpoll import main
 
 from modpoll.arg_parser import get_parser
 from modpoll.modbus_task import Device, Poller, Reference, ModbusHandler
@@ -363,14 +362,6 @@ def test_autoremove_on_connect_failure():
     assert poller.disabled is True
 
 
-def test_mqtt_subscribe_pattern_rejects_prefixed_topic():
-    pattern = "modpoll/+/set"
-    assert (
-        main.extract_device_from_mqtt_topic(pattern, "modpoll/dev/set") == "dev"
-    )
-    assert main.extract_device_from_mqtt_topic(pattern, "xmodpoll/dev/set") is None
-
-
 def test_export_omits_non_finite_floats(tmp_path):
     device = Device("dev", 1)
     good = Reference(device, "good", "0", "float32", "r", None, None)
@@ -452,26 +443,6 @@ def test_invalid_endian_aborts_config_load(caplog):
         devices = handler._parse_config(csv.reader(io.StringIO(config)))
     assert devices == []
     assert "Invalid endian" in caplog.text
-
-
-def test_duplicate_reference_name_logs_warning(caplog):
-    import csv
-    import io
-
-    config = "\n".join(
-        [
-            "device,dev,1",
-            "poll,holding_register,0,2,BE_BE",
-            "ref,dup,0,uint16,r",
-            "ref,dup,1,uint16,r",
-        ]
-    )
-    handler = ModbusHandler(MagicMock(), "unused")
-    with caplog.at_level("WARNING"):
-        devices = handler._parse_config(csv.reader(io.StringIO(config)))
-    assert len(devices) == 1
-    assert devices[0].references["dup"].address == 1
-    assert "Duplicate reference name 'dup'" in caplog.text
 
 
 def test_duplicate_device_name_aborts_config(caplog):

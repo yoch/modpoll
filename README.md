@@ -236,29 +236,28 @@ See [document](https://gavinying.github.io/modpoll/usage.html#Named%20Arguments)
 </p>
 
 
-### Write registers via MQTT publish
+### Write references via MQTT
 
-The *modpoll* tool will subscribe to the topic `modpoll/{{device_name}}/set` by default once it successfully connected to MQTT broker, user can write device register(s) via MQTT publish,
+Once connected to an MQTT broker, *modpoll* subscribes to `modpoll/+/set` by default. Publish to `modpoll/<device>/set` with a JSON payload to write a CSV reference using the same decoded/scaled values as the data publish:
 
-- To write a single holding register (address at `40001`)
+Topic: `modpoll/cta_conf/set`
 
-  ```json
-  {
-    "object_type": "holding_register",
-    "address": 40001,
-    "value": 12
-  }
-  ```
+```json
+{
+  "ref": "PID_V3V_EC_Consigne_reprise",
+  "value": 21.5
+}
+```
 
-- To write multiple holding registers (address starting from `40001`)
+- the **device** is taken from the topic (`cta_conf` above), not from the JSON payload
+- `ref` — reference name from the CSV (`ref,<name>,...` row); the pair `(device, ref)` must be unique
+- `value` — engineering value (decoded type and scale from the CSV are applied automatically on write)
 
-  ```json
-  {
-    "object_type": "holding_register",
-    "address": 40001,
-    "value": [12, 13, 14, 15]
-  }
-  ```
+Example with [`examples/CTA/cta_conf_restaurant.csv`](examples/CTA/cta_conf_restaurant.csv): a reference defined as `int16` with scale `0.1` and unit `°C` accepts `21.5` in the command; modpoll writes the raw register value `215`.
+
+The subscribe topic pattern can be customized with `--mqtt-subscribe-topic-pattern` (default: `modpoll/+/set`).
+
+**Migration from 1.6.x:** the low-level write format (`object_type`, `address`, `value`) was removed. Use the topic for the device name and `ref` + `value` in the payload instead.
 
 
 ## Run with docker

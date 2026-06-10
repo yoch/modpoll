@@ -157,7 +157,7 @@ def test_mqtt_subscribe_pattern_without_plus_exits(monkeypatch):
             "--mqtt-host",
             "broker.local",
             "--mqtt-subscribe-topic-pattern",
-            "modpoll/{{device_name}}/set",
+            "modpoll/set",
         ],
     )
 
@@ -165,6 +165,13 @@ def test_mqtt_subscribe_pattern_without_plus_exits(monkeypatch):
         main.app()
 
     assert excinfo.value.code == 1
+
+
+def test_extract_device_from_mqtt_topic():
+    pattern = "modpoll/+/set"
+    assert main.extract_device_from_mqtt_topic(pattern, "modpoll/cta_conf/set") == "cta_conf"
+    assert main.extract_device_from_mqtt_topic(pattern, "modpoll/dev/set") == "dev"
+    assert main.extract_device_from_mqtt_topic(pattern, "xmodpoll/dev/set") is None
 
 
 def test_mqtt_setup_close_errors_are_suppressed(monkeypatch):

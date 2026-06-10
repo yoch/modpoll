@@ -13,6 +13,14 @@ class Endian:
     LITTLE = "<"
 
 
+ENDIAN_MAP = {
+    "BE_BE": (Endian.BIG, Endian.BIG),
+    "LE_BE": (Endian.LITTLE, Endian.BIG),
+    "LE_LE": (Endian.LITTLE, Endian.LITTLE),
+    "BE_LE": (Endian.BIG, Endian.LITTLE),
+}
+
+
 class RegisterDecoder:
     """Decode Modbus register/coil payloads with configurable byte and word order."""
 
@@ -98,3 +106,75 @@ class RegisterDecoder:
 
     def skip_bytes(self, nbytes: int) -> None:
         self._pointer += nbytes
+
+
+class RegisterEncoder:
+    """Encode Python values into Modbus register words (inverse of RegisterDecoder)."""
+
+    __slots__ = ("_payload", "_byteorder", "_wordorder")
+
+    def __init__(self, byteorder=Endian.LITTLE, wordorder=Endian.BIG):
+        self._payload = bytearray()
+        self._byteorder = byteorder
+        self._wordorder = wordorder
+
+    def _pack_words(self, handle: bytes) -> bytes:
+        if Endian.LITTLE in (self._byteorder, self._wordorder):
+            if len(handle) >= 2:
+                handle_array = array("H", handle)
+                if self._wordorder == Endian.LITTLE:
+                    handle_array.reverse()
+                if self._byteorder == Endian.LITTLE:
+                    handle_array.byteswap()
+                handle = handle_array.tobytes()
+        return handle
+
+    def encode_16bit_uint(self, value: int) -> None:
+        self._payload.extend(pack(self._byteorder + "H", value & 0xFFFF))
+
+    def encode_16bit_int(self, value: int) -> None:
+        self._payload.extend(pack(self._byteorder + "h", value))
+
+    def encode_32bit_uint(self, value: int) -> None:
+        handle = pack("!I", value & 0xFFFFFFFF)
+        self._payload.extend(self._pack_words(handle))
+
+    def encode_32bit_int(self, value: int) -> None:
+        handle = pack("!i", value)
+        self._payload.extend(self._pack_words(handle))
+
+    def encode_64bit_uint(self, value: int) -> None:
+        handle = pack("!Q", value & 0xFFFFFFFFFFFFFFFF)
+        self._payload.extend(self._pack_words(handle))
+
+    def encode_64bit_int(self, value: int) -> None:
+        handle = pack("!q", value)
+        self._payload.extend(self._pack_words(handle))
+
+    def encode_16bit_float(self, value: float) -> None:
+        handle = pack("!e", value)
+        self._payload.extend(self._pack_words(handle))
+
+    def encode_32bit_float(self, value: float) -> None:
+        handle = pack("!f", value)
+        self._payload.extend(self._pack_words(handle))
+
+    def encode_64bit_float(self, value: float) -> None:
+        handle = pack("!d", value)
+        self._payload.extend(self._pack_words(handle))
+
+    def encode_string(self, value: str, size: int) -> None:
+        encoded = value.encode("utf-8")[:size]
+        encoded = encoded.ljust(size, b"\x00")
+        handle = encoded
+        if size >= 2:
+            handle = self._pack_words(handle)
+        self._payload.extend(handle)
+
+    def to_registers(self) -> list[int]:
+        payload = bytes(self._payload)
+        if len(payload) % 2:
+            payload += b"\x00"
+        if not payload:
+            return []
+        return list(unpack(f"!{len(payload) // 2}H", payload))

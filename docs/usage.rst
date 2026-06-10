@@ -64,3 +64,24 @@ Framers and transports
 
 - Serial (`--serial`, alias `--rtu`) supports framers `rtu` and `ascii` (e.g., `--serial ... --framer ascii`). Binary framer was removed in pymodbus 3.9+. If `--framer default` is used, pymodbus defaults to RTU framer.
 - TCP/UDP (`--tcp`/`--udp`) use the `socket` framer; other framers are rejected. If `--framer default` is used, pymodbus defaults to socket framer.
+
+MQTT write commands
+-------------------
+
+Subscribe pattern (default): ``modpoll/+/set``. Publish to ``modpoll/<device>/set`` with payload:
+
+.. code-block:: json
+
+  {
+    "ref": "PID_V3V_EC_Consigne_reprise",
+    "value": 21.5
+  }
+
+- The **device** is taken from the MQTT topic, not from the JSON payload (a ``device`` key in the payload is ignored).
+- ``ref`` identifies the CSV reference; the pair ``(device, ref)`` must be unique (the same ``ref`` name may exist on different devices).
+- ``value`` uses the same decoded engineering units as MQTT publish (scale and dtype from the CSV are handled by modpoll).
+- Only references marked ``rw`` or ``w`` in the CSV can be written.
+
+Duplicate reference names on the same device are rejected when loading the config file.
+
+**Breaking change (1.7.0+):** the previous low-level format (``object_type``, ``address``, ``value``) is no longer supported.

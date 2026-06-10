@@ -129,7 +129,7 @@ def get_parser():
     parser.add_argument(
         "--mqtt-subscribe-topic-pattern",
         default="modpoll/+/set",
-        help='Topic pattern for MQTT subscribe. Defaults to "modpoll/+/set"',
+        help='Topic pattern for MQTT write commands. Use + as placeholder for device name. Defaults to "modpoll/+/set"',
     )
     parser.add_argument(
         "--mqtt-diagnostics-topic-pattern",
