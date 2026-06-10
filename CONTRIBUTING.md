@@ -89,4 +89,33 @@ Here we assume you already have `python`, `poetry`, and `Git` installed. Otherwi
 
 7. Submit a pull request through the GitHub website.
 
+## Releasing
+
+PyPI publish and the public documentation site are **not** updated on ordinary pushes to `main`.
+They run only when:
+
+1. A **GitHub Release is published** (tag `vX.Y.Z`), which triggers [`.github/workflows/on-release-main.yml`](.github/workflows/on-release-main.yml), or
+2. That workflow is started **manually** from the Actions tab (`workflow_dispatch`).
+
+The workflow publishes the package to PyPI (trusted publisher / OIDC) and deploys Sphinx output to the `gh-pages` branch.
+
+### Typical release flow
+
+**With release-please** (optional automation): merge the release-please PR on `main`; when the GitHub Release is published, publish + docs run automatically.
+
+**Manual release:**
+
+```bash
+# bump version in pyproject.toml, update CHANGELOG.md, commit, push
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG-excerpt.md
+```
+
+**Manual re-run** (same version already on PyPI will fail at upload; use only to retry a failed docs deploy after fixing the workflow):
+
+```bash
+gh workflow run release-main --repo yoch/modpoll2mqtt --ref main
+```
+
+CI on push (`main.yml`) runs tests and a **docs build check only** — it does not deploy the site.
+
 Happy Coding!

@@ -1,6 +1,6 @@
 # modpoll2mqtt — Modbus to MQTT Gateway
 
-[![Release](https://img.shields.io/github/v/release/yoch/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/releases)
+[![Release](https://img.shields.io/pypi/v/modpoll2mqtt?label=release)](https://github.com/yoch/modpoll2mqtt/releases)
 [![Build status](https://img.shields.io/github/actions/workflow/status/yoch/modpoll2mqtt/main.yml?branch=main)](https://github.com/yoch/modpoll2mqtt/actions/workflows/main.yml?query=branch%3Amain)
 [![License](https://img.shields.io/pypi/l/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/blob/main/LICENSE)
 [![Downloads](https://static.pepy.tech/badge/modpoll2mqtt/week)](https://pepy.tech/project/modpoll2mqtt)
