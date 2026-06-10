@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/yoch/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/releases)
 [![Build status](https://img.shields.io/github/actions/workflow/status/yoch/modpoll2mqtt/main.yml?branch=main)](https://github.com/yoch/modpoll2mqtt/actions/workflows/main.yml?query=branch%3Amain)
-[![License](https://img.shields.io/github/license/yoch/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/blob/main/LICENSE)
+[![License](https://img.shields.io/pypi/l/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/blob/main/LICENSE)
 [![Downloads](https://static.pepy.tech/badge/modpoll2mqtt/week)](https://pepy.tech/project/modpoll2mqtt)
 
 > Documentation: [yoch.github.io/modpoll2mqtt](https://yoch.github.io/modpoll2mqtt)
