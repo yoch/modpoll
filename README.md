@@ -1,48 +1,48 @@
-# modpoll2mqtt — Passerelle Modbus vers MQTT
+# modpoll2mqtt — Modbus to MQTT Gateway
 
 [![Release](https://img.shields.io/github/v/release/yoch/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/releases)
 [![Build status](https://img.shields.io/github/actions/workflow/status/yoch/modpoll2mqtt/main.yml?branch=main)](https://github.com/yoch/modpoll2mqtt/actions/workflows/main.yml?query=branch%3Amain)
 [![License](https://img.shields.io/github/license/yoch/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/blob/main/LICENSE)
 [![Downloads](https://static.pepy.tech/badge/modpoll2mqtt/week)](https://pepy.tech/project/modpoll2mqtt)
 
-> Documentation : [yoch.github.io/modpoll2mqtt](https://yoch.github.io/modpoll2mqtt)
+> Documentation: [yoch.github.io/modpoll2mqtt](https://yoch.github.io/modpoll2mqtt)
 
-**modpoll2mqtt** est une passerelle Modbus → MQTT en ligne de commande. Elle interroge des équipements Modbus (RTU, TCP, UDP) selon un fichier CSV de configuration, publie les valeurs sur un broker MQTT et accepte des commandes d’écriture par référence.
+**modpoll2mqtt** is a command-line Modbus-to-MQTT gateway. It polls Modbus devices (RTU, TCP, UDP) using CSV configuration files, publishes values to an MQTT broker, and accepts write commands by CSV reference name.
 
-Le package s’installe sous le nom PyPI `modpoll2mqtt` ; la commande exécutable reste `modpoll`.
+Install the PyPI package as `modpoll2mqtt`; the executable command remains `modpoll`.
 
-Fork de [modpoll](https://github.com/gavinying/modpoll), avec notamment l’écriture MQTT sémantique par `ref` + `value` et des exemples CTA (centrales de traitement d’air).
+Fork of [modpoll](https://github.com/gavinying/modpoll), with semantic MQTT writes by `ref` + `value` and CTA (air handling unit) examples.
 
-## Fonctionnalités
+## Features
 
-- Modbus RTU, TCP et UDP (fichiers CSV de configuration)
-- Affichage local des données pollées (mode debug)
-- Publication MQTT des références (topics configurables)
-- Écriture MQTT par nom de référence CSV (`modpoll/<device>/set`)
-- Export CSV local des données
-- Accès bit à bit sur registres et coils
+- Modbus RTU, TCP, and UDP (CSV configuration files)
+- Local display of polled data (debug mode)
+- MQTT publishing of references (configurable topics)
+- MQTT writes by CSV reference name (`modpoll/<device>/set`)
+- Local CSV export of polled data
+- Bit-level access on registers and coils
 
 ## Installation
 
-Python 3.10+ requis.
+Python 3.10+ required.
 
 ```bash
 pip install modpoll2mqtt
 ```
 
-Option Modbus série (pyserial) :
+Optional serial support (pyserial):
 
 ```bash
 pip install 'modpoll2mqtt[serial]'
 ```
 
-Mise à jour :
+Upgrade:
 
 ```bash
 pip install -U modpoll2mqtt
 ```
 
-Sous Windows, [pipx](https://pypa.github.io/pipx/installation/) est recommandé :
+On Windows, [pipx](https://pypa.github.io/pipx/installation/) is recommended:
 
 ```powershell
 pipx install modpoll2mqtt
@@ -50,7 +50,7 @@ pipx install modpoll2mqtt
 
 ## Quickstart
 
-Lecture unique d’un équipement Modbus TCP (remplacer l’adresse IP par la vôtre) :
+Single poll of a Modbus TCP device (replace the IP address with yours):
 
 ```bash
 modpoll --once \
@@ -58,7 +58,7 @@ modpoll --once \
   --config examples/modsim.csv
 ```
 
-Publication vers un broker MQTT :
+Publish to an MQTT broker:
 
 ```bash
 modpoll \
@@ -67,11 +67,11 @@ modpoll \
   --config examples/modsim.csv
 ```
 
-Les données sont publiées sur `modpoll/<device_name>/data` par défaut.
+Data is published to `modpoll/<device_name>/data` by default.
 
-### Écriture par référence MQTT
+### MQTT write by reference
 
-Une fois connecté au broker, `modpoll` s’abonne à `modpoll/+/set`. Publier sur `modpoll/<device>/set` :
+Once connected to the broker, `modpoll` subscribes to `modpoll/+/set`. Publish to `modpoll/<device>/set`:
 
 ```json
 {
@@ -80,47 +80,47 @@ Une fois connecté au broker, `modpoll` s’abonne à `modpoll/+/set`. Publier s
 }
 ```
 
-Exemple avec [`examples/CTA/cta_conf_restaurant.csv`](examples/CTA/cta_conf_restaurant.csv) : une référence `int16` avec échelle `0.1` accepte `21.5` en entrée ; la valeur brute `215` est écrite dans le registre.
+Example with [`examples/CTA/cta_conf_restaurant.csv`](examples/CTA/cta_conf_restaurant.csv): an `int16` reference with scale `0.1` accepts `21.5` as input; the raw register value `215` is written.
 
-**Migration depuis modpoll 1.6.x :** le format bas niveau (`object_type`, `address`, `value`) n’est plus supporté.
+**Migration from modpoll 1.6.x:** the low-level format (`object_type`, `address`, `value`) is no longer supported.
 
-### Pièges de configuration
+### Configuration pitfalls
 
-- Sur les pollers **coil** / **discrete_input**, utiliser `bool` avec l’**adresse Modbus absolue** pour un seul booléen.
-- `bool8` / `bool16` : lectures groupées legacy (index de groupe, pas adresse coil directe).
-- Sur **holding_register** / **input_register**, `bool` avec `adresse:bit` (0–15), ex. `40019:15,bool`.
-- `<endian>` : `BE_BE`, `LE_BE`, `LE_LE` ou `BE_LE` uniquement.
-- `--autoremove` : désactive un poller après 3 échecs Modbus consécutifs.
+- On **coil** or **discrete_input** pollers, use `bool` with the **absolute Modbus coil address** for a single boolean.
+- `bool8` / `bool16`: legacy grouped reads (group index, not a direct coil address).
+- On **holding_register** or **input_register**, use `bool` with `address:bit` (0–15), e.g. `40019:15,bool`.
+- `<endian>` must be `BE_BE`, `LE_BE`, `LE_LE`, or `BE_LE` only.
+- `--autoremove` disables a poller after 3 consecutive Modbus failures.
 
-## Exemples
+## Examples
 
 ```bash
 # Modbus TCP
 modpoll --tcp 192.168.1.10 --config examples/modsim.csv
 
-# Modbus série
+# Modbus serial
 modpoll --serial /dev/ttyUSB0 --serial-baud 9600 --config contrib/eniwise/scpms6.csv
 
-# MQTT + export CSV
+# MQTT + CSV export
 modpoll --tcp 192.168.1.10 --mqtt-host localhost --export data.csv --config examples/modsim.csv
 
-# Plusieurs fichiers de config
+# Multiple config files
 modpoll --tcp 192.168.1.10 --config examples/modsim.csv examples/modsim2.csv
 
-# CTA (exemple métier)
+# CTA (building automation example)
 modpoll --tcp 192.168.1.20 --mqtt-host localhost --config examples/CTA/cta_conf_restaurant.csv
 ```
 
-Voir le dossier [`examples/`](examples/) et [`contrib/`](contrib/) pour d’autres configurations.
+See [`examples/`](examples/) and [`contrib/`](contrib/) for more device configurations.
 
 ## Credits
 
-Ce projet s’appuie sur :
+This project builds on:
 
 - [modpoll](https://github.com/gavinying/modpoll) — Ying Shaodong (MIT)
 - [modbus2mqtt](https://github.com/owagner/modbus2mqtt) — Oliver Wagner (MIT)
 - [spicierModbus2mqtt](https://github.com/mbs38/spicierModbus2mqtt) — Max Brueggemann (MIT)
 
-## Licence
+## License
 
-MIT — voir [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

@@ -4,8 +4,8 @@
 
 ### Project
 
-* fork divergé de [modpoll](https://github.com/gavinying/modpoll) ; package PyPI renommé `modpoll2mqtt`, dépôt `yoch/modpoll2mqtt`
-* commande CLI et module Python restent `modpoll`
+* forked from [modpoll](https://github.com/gavinying/modpoll); PyPI package renamed to `modpoll2mqtt`, repository `yoch/modpoll2mqtt`
+* CLI command and Python module remain `modpoll`
 
 ### Features
 
