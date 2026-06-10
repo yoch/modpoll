@@ -1,6 +1,28 @@
 Changelog
 =========
 
+`2.1.0 <https://github.com/yoch/modpoll2mqtt/compare/v2.0.0...v2.1.0>`__ (2026-06-10)
+-------------------------------------------------------------------------------------
+
+Features
+~~~~~~~~
+
+-  add ``--mqtt-keys name-only`` to publish MQTT JSON keys without
+   appending ``|unit`` (default remains ``name-with-unit``)
+-  MQTT writes on ``modpoll/<device>/set`` accept a map of references
+   ``{"ref_a": val, "ref_b": val}`` in one message; unknown keys are
+   skipped with a warning
+
+BREAKING CHANGES
+~~~~~~~~~~~~~~~~
+
+-  renamed ``--daemon`` / ``-d`` to ``--no-output`` (suppresses poll
+   result tables only; does not fork)
+-  MQTT write payload must be a reference map (``{"ref": val}``);
+   ``ref``/``value`` object format removed
+
+.. _section-1:
+
 `2.0.0 <https://github.com/yoch/modpoll2mqtt/compare/v1.6.0...v2.0.0>`__ (2026-06-10)
 -------------------------------------------------------------------------------------
 
@@ -11,6 +33,8 @@ Project
    package renamed to ``modpoll2mqtt``, repository ``yoch/modpoll2mqtt``
 -  CLI command and Python module remain ``modpoll``
 
+.. _features-1:
+
 Features
 ~~~~~~~~
 
@@ -18,6 +42,8 @@ Features
    payload ``ref`` and ``value`` (device from topic; scale, dtype, and
    endianness handled automatically)
 -  subscribe pattern ``modpoll/+/set`` by default
+
+.. _breaking-changes-1:
 
 BREAKING CHANGES
 ~~~~~~~~~~~~~~~~

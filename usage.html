@@ -88,10 +88,10 @@
              
   <section id="basic-usage">
 <h1>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h1>
-<p><p>modpoll2mqtt v2.0.0 - Modbus to MQTT gateway</p>
+<p><p>modpoll2mqtt v0.0.0 - Modbus to MQTT gateway</p>
 </p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">modpoll</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">v</span><span class="p">]</span> <span class="o">-</span><span class="n">f</span> <span class="n">CONFIG</span> <span class="p">[</span><span class="n">CONFIG</span> <span class="o">...</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">csv</span><span class="o">-</span><span class="n">delimiter</span> <span class="p">{</span><span class="n">comma</span><span class="p">,</span><span class="n">tab</span><span class="p">}]</span>
-               <span class="p">[</span><span class="o">-</span><span class="n">d</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">r</span> <span class="n">RATE</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">interval</span> <span class="n">INTERVAL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tcp</span> <span class="n">TCP</span><span class="p">]</span>
+               <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">output</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">r</span> <span class="n">RATE</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">interval</span> <span class="n">INTERVAL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tcp</span> <span class="n">TCP</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">tcp</span><span class="o">-</span><span class="n">port</span> <span class="n">TCP_PORT</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">udp</span> <span class="n">UDP</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">udp</span><span class="o">-</span><span class="n">port</span> <span class="n">UDP_PORT</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">serial</span> <span class="n">SERIAL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">serial</span><span class="o">-</span><span class="n">baud</span> <span class="n">SERIAL_BAUD</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">serial</span><span class="o">-</span><span class="n">parity</span> <span class="p">{</span><span class="n">none</span><span class="p">,</span><span class="n">odd</span><span class="p">,</span><span class="n">even</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">timeout</span> <span class="n">TIMEOUT</span><span class="p">]</span>
@@ -106,6 +106,7 @@
                <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">use</span><span class="o">-</span><span class="n">tls</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">insecure</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">cacerts</span> <span class="n">MQTT_CACERTS</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">tls</span><span class="o">-</span><span class="n">version</span> <span class="p">{</span><span class="n">tlsv1</span><span class="mf">.2</span><span class="p">,</span><span class="n">tlsv1</span><span class="mf">.1</span><span class="p">,</span><span class="n">tlsv1</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">single</span><span class="p">]</span>
+               <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">keys</span> <span class="p">{</span><span class="n">name</span><span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">unit</span><span class="p">,</span><span class="n">name</span><span class="o">-</span><span class="n">only</span><span class="p">}]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">diagnostics</span><span class="o">-</span><span class="n">rate</span> <span class="n">DIAGNOSTICS_RATE</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">autoremove</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">loglevel</span> <span class="p">{</span><span class="n">DEBUG</span><span class="p">,</span><span class="n">INFO</span><span class="p">,</span><span class="n">WARNING</span><span class="p">,</span><span class="n">ERROR</span><span class="p">,</span><span class="n">CRITICAL</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">timestamp</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">delay</span> <span class="n">DELAY</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">framer</span> <span class="p">{</span><span class="n">default</span><span class="p">,</span><span class="n">ascii</span><span class="p">,</span><span class="n">rtu</span><span class="p">,</span><span class="n">socket</span><span class="p">}]</span>
@@ -125,8 +126,8 @@
 <p>Column delimiter code for Modbus config files (comma, tab). Defaults to comma</p>
 <p>Default: “comma”</p>
 </dd>
-<dt><kbd>-d, --daemon</kbd></dt>
-<dd><p>Run in daemon mode without printing result</p>
+<dt><kbd>--no-output</kbd></dt>
+<dd><p>Do not print poll results to stdout (useful under systemd)</p>
 <p>Default: False</p>
 </dd>
 <dt><kbd>-r, --rate</kbd></dt>
@@ -235,6 +236,11 @@
 <dt><kbd>--mqtt-single</kbd></dt>
 <dd><p>Publish each value in a single topic. If not specified, groups all values in one topic.</p>
 <p>Default: False</p>
+</dd>
+<dt><kbd>--mqtt-keys</kbd></dt>
+<dd><p>Possible choices: name-with-unit, name-only</p>
+<p>MQTT JSON payload key format. “name-with-unit” appends “<a href="#id1"><span class="problematic" id="id2">|</span></a>unit” when configured (default). “name-only” uses reference names only.</p>
+<p>Default: “name-with-unit”</p>
 </dd>
 <dt><kbd>--diagnostics-rate</kbd></dt>
 <dd><p>Time in seconds as publishing period for each device diagnostics</p>
