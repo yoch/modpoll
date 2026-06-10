@@ -28,6 +28,16 @@ CSV_DELIMITER_CODES = {
     "comma": ",",
     "tab": "\t",
 }
+_MQTT_KEYS_NAME_WITH_UNIT = "name-with-unit"
+_MQTT_KEYS_NAME_ONLY = "name-only"
+
+
+def _mqtt_payload_key(ref: "Reference", mqtt_keys: str) -> str:
+    if mqtt_keys == _MQTT_KEYS_NAME_ONLY:
+        return ref.name
+    if mqtt_keys == _MQTT_KEYS_NAME_WITH_UNIT:
+        return f"{ref.name}|{ref.unit}" if ref.unit else ref.name
+    raise ValueError(f"Unknown mqtt_keys: {mqtt_keys}")
 
 
 def _call_with_device_id(method, *args, device_id: int, **kwargs):
@@ -371,6 +381,7 @@ class ModbusHandler:
         mqtt_publish_topic_pattern: Optional[str] = None,
         mqtt_diagnostics_topic_pattern: Optional[str] = None,
         mqtt_single_publish: bool = False,
+        mqtt_keys: str = _MQTT_KEYS_NAME_WITH_UNIT,
         autoremove: bool = False,
         csv_delimiter_code: str = "comma",
     ):
@@ -385,6 +396,7 @@ class ModbusHandler:
         self.mqtt_publish_topic_pattern = mqtt_publish_topic_pattern
         self.mqtt_diagnostics_topic_pattern = mqtt_diagnostics_topic_pattern
         self.mqtt_single_publish = mqtt_single_publish
+        self.mqtt_keys = mqtt_keys
         self.autoremove = autoremove
         self.deviceList: List[Device] = []
         self.logger = logging.getLogger(__name__)
@@ -679,7 +691,7 @@ class ModbusHandler:
                     if isinstance(ref.val, float)
                     else ref.val
                 )
-                key = f"{ref.name}|{ref.unit}" if ref.unit else ref.name
+                key = _mqtt_payload_key(ref, self.mqtt_keys)
                 payload[key] = ref_val
 
                 if self.mqtt_single_publish:
@@ -787,6 +799,7 @@ def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
             mqtt_publish_topic_pattern=args.mqtt_publish_topic_pattern,
             mqtt_diagnostics_topic_pattern=args.mqtt_diagnostics_topic_pattern,
             mqtt_single_publish=args.mqtt_single,
+            mqtt_keys=args.mqtt_keys,
             autoremove=args.autoremove,
             csv_delimiter_code=args.csv_delimiter,
         )

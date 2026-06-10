@@ -3,6 +3,7 @@ import argparse
 from . import __version__
 
 _CSV_DELIMITER_CHOICES = ("comma", "tab")
+_MQTT_KEYS_CHOICES = ("name-with-unit", "name-only")
 
 
 def get_parser():
@@ -173,6 +174,15 @@ def get_parser():
         "--mqtt-single",
         action="store_true",
         help="Publish each value in a single topic. If not specified, groups all values in one topic.",
+    )
+    parser.add_argument(
+        "--mqtt-keys",
+        default="name-with-unit",
+        choices=_MQTT_KEYS_CHOICES,
+        help=(
+            'MQTT JSON payload key format. "name-with-unit" appends "|unit" when '
+            'configured (default). "name-only" uses reference names only.'
+        ),
     )
     parser.add_argument(
         "--diagnostics-rate",

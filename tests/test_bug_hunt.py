@@ -132,6 +132,63 @@ def test_failed_modbus_connect_clears_poll_success_and_skips_mqtt():
 # ---------------------------------------------------------------------------
 
 
+def test_publish_data_uses_name_with_unit_by_default():
+    device = Device("dev", 1)
+    device.pollSuccess = True
+    ref = Reference(device, "temp", "0", "int16", "r", "°C", 0.1)
+    ref.val = 21.2
+    device.references = {"temp": ref}
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+    )
+    handler.deviceList = [device]
+    handler.publish_data()
+
+    payload = json.loads(mqtt.publish.call_args[0][1])
+    assert payload == {"temp|°C": 21.2}
+
+
+def test_publish_data_mqtt_keys_name_only():
+    device = Device("dev", 1)
+    device.pollSuccess = True
+    ref = Reference(device, "temp", "0", "int16", "r", "°C", 0.1)
+    ref.val = 21.2
+    device.references = {"temp": ref}
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+        mqtt_keys="name-only",
+    )
+    handler.deviceList = [device]
+    handler.publish_data()
+
+    payload = json.loads(mqtt.publish.call_args[0][1])
+    assert payload == {"temp": 21.2}
+
+
+def test_mqtt_keys_name_only_cli_option():
+    args = get_parser().parse_args(
+        [
+            "--config",
+            "dummy.csv",
+            "--tcp",
+            "127.0.0.1",
+            "--mqtt-keys",
+            "name-only",
+        ]
+    )
+    assert args.mqtt_keys == "name-only"
+
+
 def test_publish_data_omits_null_reference_values():
     device = Device("dev", 1)
     device.pollSuccess = True
