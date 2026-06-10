@@ -11,8 +11,10 @@
 #
 # Configuration Objects
 # --------------------------
-# <device_name>: any string without spaces to describe the device
-# <device_id>: integer 1 to 254 to describe device ID
+# <device_name>: any string without spaces to describe the device (must be unique in the file)
+# <device_id>: integer 1 to 254; Modbus slave address used on the bus
+# Multiple device rows may share the same <device_id> when they are logical views of one
+# physical slave (distinct MQTT topics via {{device_name}}); poll ranges must not overlap
 # <object_type>: coil/discrete_input/holding_register/input_register
 # <start_address>: integer 0 to 65535 (The start address of Modbus registers to poll)
 # <size>: integer 0 to 65535 (No. of registers to poll and value must not exceed the limits of Modbus)
@@ -38,8 +40,11 @@
 # poll,...          <- the second poller of dev001
 # ref,...
 # ref,...
-# device,dev002,2   <- the second device (dev002)
+# device,dev002,2   <- a second physical slave (dev002)
 # poll,...          <- the first poller of dev002
+# ref,...
+# device,dev001b,1  <- optional: another logical device on slave 1 (unique name, non-overlapping polls)
+# poll,...
 # ref,...
 #
 # Configuration Example

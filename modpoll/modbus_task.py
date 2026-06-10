@@ -44,6 +44,41 @@ def _poller_identity(poller: "Poller") -> tuple:
     return (poller.fc, poller.start_address, poller.size, poller.endian.upper())
 
 
+def _validate_cross_device_config(
+    device_list: List["Device"], logger: logging.Logger
+) -> None:
+    by_slave: dict[int, list[str]] = {}
+    by_slave_fc: dict[tuple[int, int], list[tuple[str, int, int]]] = {}
+    for dev in device_list:
+        by_slave.setdefault(dev.devid, []).append(dev.name)
+        for poller in dev.pollerList:
+            key = (dev.devid, poller.fc)
+            by_slave_fc.setdefault(key, []).append(
+                (dev.name, poller.start_address, poller.size)
+            )
+
+    slaves_with_overlap: set[int] = set()
+    for (slave_id, fc), pollers in by_slave_fc.items():
+        for i, (name_a, start_a, size_a) in enumerate(pollers):
+            end_a = start_a + size_a
+            for name_b, start_b, size_b in pollers[i + 1 :]:
+                end_b = start_b + size_b
+                if start_a < end_b and start_b < end_a:
+                    slaves_with_overlap.add(slave_id)
+                    logger.warning(
+                        f"Overlapping Modbus poll ranges on slave ID {slave_id} "
+                        f"(fc={fc}): device '{name_a}' [{start_a}, {end_a}) "
+                        f"overlaps device '{name_b}' [{start_b}, {end_b})"
+                    )
+
+    for slave_id, names in by_slave.items():
+        if len(names) > 1 and slave_id not in slaves_with_overlap:
+            logger.warning(
+                f"Modbus slave ID {slave_id} shared by logical devices: "
+                f"{', '.join(names)}"
+            )
+
+
 class Device:
     def __init__(self, device_name: str, device_id: int):
         self.name = device_name
@@ -395,7 +430,6 @@ class ModbusHandler:
         current_device = None
         current_poller = None
         seen_device_names: set = set()
-        seen_device_ids: set = set()
         try:
             for row in csv_reader:
                 if not row or all(cell.strip() == "" for cell in row):
@@ -415,13 +449,7 @@ class ModbusHandler:
                             f"Duplicate device name '{device_name}'; aborting config file"
                         )
                         return []
-                    if device_id in seen_device_ids:
-                        self.logger.error(
-                            f"Duplicate device ID {device_id}; aborting config file"
-                        )
-                        return []
                     seen_device_names.add(device_name)
-                    seen_device_ids.add(device_id)
                     current_device = Device(device_name, device_id)
                     device_list.append(current_device)
                 elif "poll" in row[0].lower():
@@ -473,6 +501,7 @@ class ModbusHandler:
                         self.logger.debug(
                             f"Add reference {ref.name} to device {current_device.name}"
                         )
+            _validate_cross_device_config(device_list, self.logger)
             return device_list
         except Exception as e:
             self.logger.error(f"Error parsing config: {e}")

@@ -492,7 +492,7 @@ def test_duplicate_device_name_aborts_config(caplog):
     assert "Duplicate device name 'same'" in caplog.text
 
 
-def test_duplicate_device_id_aborts_config(caplog):
+def test_shared_slave_id_logs_warning_and_loads(caplog):
     import csv
     import io
 
@@ -504,10 +504,62 @@ def test_duplicate_device_id_aborts_config(caplog):
         ]
     )
     handler = ModbusHandler(MagicMock(), "unused")
-    with caplog.at_level("ERROR"):
+    with caplog.at_level("WARNING"):
         devices = handler._parse_config(csv.reader(io.StringIO(config)))
-    assert devices == []
-    assert "Duplicate device ID 1" in caplog.text
+    assert len(devices) == 2
+    assert {d.name for d in devices} == {"devA", "devB"}
+    assert devices[0].devid == devices[1].devid == 1
+    assert "Modbus slave ID 1 shared by logical devices: devA, devB" in caplog.text
+
+
+def test_shared_slave_id_adjacent_ranges_no_overlap_warning(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,cta_conf,1",
+            "poll,coil,0,14,BE_BE",
+            "ref,BP_MA_CTA,0,bool,rw",
+            "poll,holding_register,0,7,BE_BE",
+            "ref,PID_EC,0,int16,rw",
+            "device,cta_rest,1",
+            "poll,coil,14,8,BE_BE",
+            "ref,BP_MA_CTA,14,bool,rw",
+            "poll,holding_register,7,6,BE_BE",
+            "ref,PID_EC,7,int16,rw",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("WARNING"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert len(devices) == 2
+    assert "Modbus slave ID 1 shared by logical devices: cta_conf, cta_rest" in caplog.text
+    assert "Overlapping Modbus poll ranges" not in caplog.text
+
+
+def test_overlapping_poller_ranges_warns(caplog):
+    import csv
+    import io
+
+    config = "\n".join(
+        [
+            "device,devA,1",
+            "poll,coil,0,10,BE_BE",
+            "ref,a,0,bool,r",
+            "device,devB,1",
+            "poll,coil,5,10,BE_BE",
+            "ref,b,5,bool,r",
+        ]
+    )
+    handler = ModbusHandler(MagicMock(), "unused")
+    with caplog.at_level("WARNING"):
+        devices = handler._parse_config(csv.reader(io.StringIO(config)))
+    assert len(devices) == 2
+    assert "Overlapping Modbus poll ranges on slave ID 1 (fc=1)" in caplog.text
+    assert "device 'devA' [0, 10)" in caplog.text
+    assert "device 'devB' [5, 15)" in caplog.text
+    assert "shared by logical devices" not in caplog.text
 
 
 def test_duplicate_poller_skipped(caplog):
