@@ -1,6 +1,21 @@
 import pytest
-import time
+import ssl
+from paho.mqtt.client import ConnectFlags
+from paho.mqtt.packettypes import PacketTypes
+from paho.mqtt.reasoncodes import ReasonCode
+
 from modpoll.mqtt_task import MqttHandler
+
+
+def _signal_connect(handler, rc=0):
+    """Simulate the paho VERSION2 on_connect dispatch (ConnectFlags + ReasonCode)."""
+    handler._on_connect(
+        handler.mqtt_client,
+        None,
+        ConnectFlags(session_present=False),
+        ReasonCode(PacketTypes.CONNACK, identifier=rc),
+        None,
+    )
 
 
 def test_mqtt_task_setup():
@@ -38,7 +53,7 @@ def test_rx_queue_respects_configured_size():
         rx_queue_size=2,
     )
 
-    assert handler.rx_queue._maxsize == 2
+    assert handler.rx_queue.maxsize == 2
 
 
 def test_receive_empty_queue_returns_none():
@@ -117,8 +132,6 @@ def test_publish_when_connected_calls_client_publish():
 
 
 def test_mqtt_tlsv1_unsupported_returns_false_from_setup(monkeypatch):
-    import ssl
-
     handler = MqttHandler(
         name="test_mqtt",
         host="broker.emqx.io",
@@ -204,13 +217,20 @@ def test_connect_mqtt_v311_omits_clean_session_kwarg(monkeypatch):
     assert handler.setup()
 
     captured = {}
+    connected = [False]
 
-    def fake_connect(**kwargs):
+    def fake_connect_async(**kwargs):
         captured.update(kwargs)
-        return 0
+        connected[0] = True
+        _signal_connect(handler)
 
-    monkeypatch.setattr(handler.mqtt_client, "connect", fake_connect)
-    monkeypatch.setattr(handler.mqtt_client, "loop_start", lambda: None)
+    monkeypatch.setattr(handler.mqtt_client, "connect_async", fake_connect_async)
+    monkeypatch.setattr(
+        handler.mqtt_client,
+        "loop_start",
+        lambda: None,
+    )
+    monkeypatch.setattr(handler.mqtt_client, "is_connected", lambda: connected[0])
 
     assert handler.connect() is True
     assert "clean_session" not in captured
@@ -252,26 +272,189 @@ def test_publish_attempts_reconnect_when_disconnected_qos1(monkeypatch):
     assert called.get("connect") is True
 
 
-@pytest.mark.integration
-def test_mqtt_task_connect():
-    mqtt_handler = MqttHandler(
+def test_connect_returns_false_when_not_connected(monkeypatch):
+    handler = MqttHandler(
         name="test_mqtt",
-        host="broker.emqx.io",
+        host="broker.local",
         port=1883,
         user=None,
         password=None,
-        clientid="test_client_13579",
+        clientid="test_client",
+        qos=0,
+    )
+    assert handler.setup()
+
+    disconnect_called = []
+
+    handler.mqtt_client.loop_start = lambda: None
+    handler.mqtt_client.connect_async = lambda **kwargs: None
+    handler.mqtt_client.is_connected = lambda: False
+    handler.mqtt_client.disconnect = lambda *args, **kwargs: disconnect_called.append(
+        True
+    )
+    handler.mqtt_client.loop_stop = lambda: None
+
+    tick = [0.0]
+
+    def fake_monotonic():
+        tick[0] += 5.0
+        return tick[0]
+
+    monkeypatch.setattr("modpoll.mqtt_task.time.monotonic", fake_monotonic)
+    monkeypatch.setattr("modpoll.mqtt_task.delay_thread", lambda timeout: None)
+
+    assert handler.connect() is False
+    assert disconnect_called
+
+
+def test_connect_returns_true_when_is_connected(monkeypatch):
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.local",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client",
+        qos=0,
+    )
+    assert handler.setup()
+
+    checks = [0]
+
+    def fake_connect_async(**kwargs):
+        checks[0] += 1
+        _signal_connect(handler)
+
+    handler.mqtt_client.loop_start = lambda: None
+    handler.mqtt_client.connect_async = fake_connect_async
+    handler.mqtt_client.is_connected = lambda: checks[0] == 1
+
+    monkeypatch.setattr("modpoll.mqtt_task.delay_thread", lambda timeout: None)
+
+    assert handler.connect() is True
+
+
+def test_connect_stops_previous_loop_before_reconnecting(monkeypatch):
+    """connect() must terminate any previous network loop (disconnect + loop_stop)
+    before reusing the same client for a fresh connect_async/loop_start cycle."""
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.local",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client",
+        qos=0,
+    )
+    assert handler.setup()
+
+    calls = []
+    connected = [False]
+
+    def fake_connect_async(**kwargs):
+        connected[0] = True
+        calls.append("connect_async")
+        _signal_connect(handler)
+
+    handler.mqtt_client.disconnect = lambda: calls.append("disconnect")
+    handler.mqtt_client.loop_stop = lambda: calls.append("loop_stop")
+    handler.mqtt_client.connect_async = fake_connect_async
+    handler.mqtt_client.loop_start = lambda: calls.append("loop_start")
+    handler.mqtt_client.is_connected = lambda: connected[0]
+    monkeypatch.setattr("modpoll.mqtt_task.delay_thread", lambda timeout: None)
+
+    assert handler.connect() is True
+    assert calls == ["disconnect", "loop_stop", "connect_async", "loop_start"]
+
+
+def test_connect_starts_loop_when_network_thread_absent(monkeypatch):
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.local",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client",
+        qos=0,
+    )
+    assert handler.setup()
+
+    handler.mqtt_client.loop_start = lambda: None
+    handler.mqtt_client.connect_async = lambda **kwargs: _signal_connect(handler)
+    handler.mqtt_client.is_connected = lambda: True
+
+    monkeypatch.setattr("modpoll.mqtt_task.delay_thread", lambda timeout: None)
+
+    assert handler.connect() is True
+
+
+def test_connect_returns_false_when_connack_rejected(monkeypatch):
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.local",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client",
+        qos=0,
+    )
+    assert handler.setup()
+
+    disconnect_called = []
+
+    handler.mqtt_client.loop_start = lambda: None
+    handler.mqtt_client.connect_async = lambda **kwargs: _signal_connect(
+        handler, rc=135  # CONNACK "Not authorized"
+    )
+    handler.mqtt_client.is_connected = lambda: False
+    handler.mqtt_client.disconnect = lambda *args, **kwargs: disconnect_called.append(
+        True
+    )
+    handler.mqtt_client.loop_stop = lambda: None
+
+    monkeypatch.setattr("modpoll.mqtt_task.delay_thread", lambda timeout: None)
+
+    assert handler.connect() is False
+    # disconnect is called once before the attempt and once after the rejection
+    assert disconnect_called == [True, True]
+
+
+def test_connect_returns_false_after_close(monkeypatch):
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.local",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client",
+        qos=0,
+    )
+    assert handler.setup()
+
+    loop_start_calls = []
+    handler.mqtt_client.loop_start = lambda: loop_start_calls.append(True)
+
+    handler.close()
+
+    assert handler.connect() is False
+    assert loop_start_calls == []
+
+
+@pytest.mark.integration
+def test_mqtt_task_connect(mqtt_broker, unique_mqtt_client_id):
+    host, port = mqtt_broker
+    mqtt_handler = MqttHandler(
+        name="test_mqtt",
+        host=host,
+        port=port,
+        user=None,
+        password=None,
+        clientid=unique_mqtt_client_id,
         qos=0,
     )
 
     assert mqtt_handler.setup()
     assert mqtt_handler.connect()
-
-    # Add a short delay to allow the connection to establish
-    time.sleep(1)
-
-    # Test connection
     assert mqtt_handler.is_connected()
 
-    # Clean up
     mqtt_handler.close()

@@ -16,6 +16,9 @@ from .mqtt_task import MqttHandler
 
 
 FLOAT_TYPE_PRECISION = 3
+_MODBUS_BACKOFF_BASE = 1.0
+_MODBUS_BACKOFF_MAX = 60.0
+_modbus_connect_failures = 0
 CONFIG_DEVICE_COL_MIN = 3
 CONFIG_POLL_COL_MIN = 5
 CONFIG_REF_COL_MIN = 5
@@ -746,11 +749,23 @@ class ModbusHandler:
 
 
 def modbus_connect(client) -> bool:
+    global _modbus_connect_failures
+    if _modbus_connect_failures > 0:
+        delay = min(
+            _MODBUS_BACKOFF_BASE * 2 ** (_modbus_connect_failures - 1),
+            _MODBUS_BACKOFF_MAX,
+        )
+        delay_thread(delay)
     try:
-        return client.connect()
+        ok = client.connect()
     except (ModbusException, OSError) as e:
         logging.getLogger(__name__).error(f"Modbus connect failed: {e}")
-        return False
+        ok = False
+    if ok:
+        _modbus_connect_failures = 0
+    else:
+        _modbus_connect_failures += 1
+    return ok
 
 
 def modbus_close(client) -> None:

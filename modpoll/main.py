@@ -201,14 +201,19 @@ def app(name="modpoll"):
                                 device_found = True
                                 write_success = False
                                 if modbus_connect(modbus_client):
-                                    if object_type == "coil":
-                                        write_success = modbus_handler.write_coil(
-                                            device_name, address, value
-                                        )
-                                    elif object_type == "holding_register":
-                                        write_success = modbus_handler.write_register(
-                                            device_name, address, value
-                                        )
+                                    try:
+                                        if object_type == "coil":
+                                            write_success = modbus_handler.write_coil(
+                                                device_name, address, value
+                                            )
+                                        elif object_type == "holding_register":
+                                            write_success = (
+                                                modbus_handler.write_register(
+                                                    device_name, address, value
+                                                )
+                                            )
+                                    finally:
+                                        modbus_close(modbus_client)
 
                                 if write_success:
                                     logger.info(

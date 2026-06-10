@@ -302,7 +302,8 @@ def test_mqtt_connect_typeerror_returns_false():
     def raise_type_error(**kwargs):
         raise TypeError("unexpected keyword argument")
 
-    handler.mqtt_client.connect = raise_type_error
+    handler.mqtt_client.loop_start = lambda: None
+    handler.mqtt_client.connect_async = raise_type_error
 
     assert handler.connect() is False
 

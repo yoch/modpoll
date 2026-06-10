@@ -13,11 +13,9 @@ def on_threading_event() -> bool:
     return _thread_event.is_set()
 
 
-def delay_thread(timeout: int):
+def delay_thread(timeout: float):
     _thread_event.wait(timeout=timeout)
 
 
-def get_utc_time():
-    dt = datetime.datetime.now(timezone.utc)
-    utc_time = dt.replace(tzinfo=timezone.utc)
-    return utc_time.timestamp()
+def get_utc_time() -> float:
+    return datetime.datetime.now(timezone.utc).timestamp()
