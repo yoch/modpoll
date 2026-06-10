@@ -17,6 +17,8 @@
 * removed low-level MQTT write format (`object_type`, `address`, `value`); use topic + `ref` and `value` instead
 * duplicate reference names on the same device now abort config loading (previously warned and overwrote)
 
+<!-- end-docs-changelog -->
+
 ## [1.6.0](https://github.com/gavinying/modpoll/compare/v1.5.1...v1.6.0) (2025-12-06)
 
 

@@ -49,12 +49,12 @@ build-and-publish: build publish ## Build and publish.
 
 .PHONY: docs
 docs: ## Build docs into html files
-	@poetry run pandoc --from=markdown --to=rst CHANGELOG.md -o docs/changelog.rst
+	@awk '/<!-- end-docs-changelog -->/{exit} {print}' CHANGELOG.md | poetry run pandoc --from=markdown --to=rst -o docs/changelog.rst
 	@poetry run sphinx-build docs/ docs/_build/html
 
 .PHONY: docs-serve
 docs-serve: ## Build and serve the docs for local dev
-	@poetry run pandoc --from=markdown --to=rst CHANGELOG.md -o docs/changelog.rst
+	@awk '/<!-- end-docs-changelog -->/{exit} {print}' CHANGELOG.md | poetry run pandoc --from=markdown --to=rst -o docs/changelog.rst
 	@poetry run sphinx-autobuild docs/ docs/_build/html
 
 .PHONY: help
