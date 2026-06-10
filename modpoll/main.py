@@ -41,7 +41,7 @@ def app(name="modpoll"):
     modbus_handlers = []
 
     print(
-        f"\nModpoll v{__version__} - A New Command-line Tool for Modbus and MQTT\n",
+        f"\nmodpoll2mqtt v{__version__} - Modbus to MQTT gateway\n",
         flush=True,
     )
 

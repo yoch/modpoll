@@ -7,7 +7,7 @@ _CSV_DELIMITER_CHOICES = ("comma", "tab")
 
 def get_parser():
     parser = argparse.ArgumentParser(
-        description=f"Modpoll v{__version__} - A New Command-line Tool for Modbus and MQTT"
+        description=f"modpoll2mqtt v{__version__} - Modbus to MQTT gateway"
     )
     parser.add_argument(
         "-v",
@@ -35,7 +35,7 @@ def get_parser():
         "-d",
         "--daemon",
         action="store_true",
-        help="Run in daemon mode without printing result. Recommended to use with docker",
+        help="Run in daemon mode without printing result",
     )
     parser.add_argument(
         "-r",

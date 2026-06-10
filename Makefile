@@ -1,4 +1,4 @@
-PROJECT_NAME ?= modpoll
+PROJECT_NAME ?= modpoll2mqtt
 
 .PHONY: install
 install: ## Install the poetry environment and install the pre-commit hooks
@@ -46,16 +46,6 @@ publish: ## Publish a release to PyPI.
 
 .PHONY: build-and-publish
 build-and-publish: build publish ## Build and publish.
-
-.PHONY: docker-build-dev
-docker-build-dev: ## Build docker for local dev
-	@echo "🚀 Creating docker image file"
-	@docker build -t ${PROJECT_NAME}:dev .
-
-.PHONY: docker-run-dev
-docker-run-dev: docker-build-dev ## Run docker compose for local dev
-	@echo "🚀 Docker compose run: ${PROJECT_NAME}:dev"
-	@docker-compose up --build
 
 .PHONY: docs
 docs: ## Build docs into html files

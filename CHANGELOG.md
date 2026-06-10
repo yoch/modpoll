@@ -1,6 +1,11 @@
 # Changelog
 
-## [1.7.0](https://github.com/gavinying/modpoll/compare/v1.6.0...v1.7.0) (2026-06-10)
+## [2.0.0](https://github.com/yoch/modpoll2mqtt/compare/v1.6.0...v2.0.0) (2026-06-10)
+
+### Project
+
+* fork divergé de [modpoll](https://github.com/gavinying/modpoll) ; package PyPI renommé `modpoll2mqtt`, dépôt `yoch/modpoll2mqtt`
+* commande CLI et module Python restent `modpoll`
 
 ### Features
 

@@ -1,3 +1,6 @@
 import importlib.metadata as importlib_metadata
 
-__version__ = importlib_metadata.version(__name__)
+try:
+    __version__ = importlib_metadata.version("modpoll2mqtt")
+except importlib_metadata.PackageNotFoundError:
+    __version__ = "0.0.0"

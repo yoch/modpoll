@@ -169,7 +169,10 @@ def test_mqtt_subscribe_pattern_without_plus_exits(monkeypatch):
 
 def test_extract_device_from_mqtt_topic():
     pattern = "modpoll/+/set"
-    assert main.extract_device_from_mqtt_topic(pattern, "modpoll/cta_conf/set") == "cta_conf"
+    assert (
+        main.extract_device_from_mqtt_topic(pattern, "modpoll/cta_conf/set")
+        == "cta_conf"
+    )
     assert main.extract_device_from_mqtt_topic(pattern, "modpoll/dev/set") == "dev"
     assert main.extract_device_from_mqtt_topic(pattern, "xmodpoll/dev/set") is None
 

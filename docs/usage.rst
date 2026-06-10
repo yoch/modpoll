@@ -33,7 +33,7 @@ Commandline Usage
 
   .. code-block:: shell
 
-    modpoll --tcp modsim.topmaker.net --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv --export data.csv
+    modpoll --tcp 192.168.1.10 --config examples/modsim.csv --export data.csv
 
 Configuration File
 ------------------
@@ -84,4 +84,4 @@ Subscribe pattern (default): ``modpoll/+/set``. Publish to ``modpoll/<device>/se
 
 Duplicate reference names on the same device are rejected when loading the config file.
 
-**Breaking change (1.7.0+):** the previous low-level format (``object_type``, ``address``, ``value``) is no longer supported.
+**Breaking change (2.0.0+):** the previous low-level format (``object_type``, ``address``, ``value``) is no longer supported.

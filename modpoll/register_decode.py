@@ -8,6 +8,7 @@ from __future__ import annotations
 from array import array
 from struct import pack, unpack
 
+
 class Endian:
     BIG = ">"
     LITTLE = "<"

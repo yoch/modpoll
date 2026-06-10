@@ -1,68 +1,48 @@
 Installation
 ============
 
-This program is tested on python 3.10+ (Ubuntu 22.04+ or equivalent). Ubuntu 20.04 and python 3.8 are no longer supported.
+This program is tested on Python 3.10+ (Ubuntu 22.04+ or equivalent). Ubuntu 20.04 and Python 3.8 are no longer supported.
+
+The PyPI package is named **modpoll2mqtt**; the installed command is **modpoll**.
 
 Install with pip or pipx
 -------------------------
 
-The package is available in the `Python Package Index <https://pypi.org/>`_,
+.. code-block:: shell
+
+    pip install modpoll2mqtt
+
+Optionally, install pyserial for Modbus-RTU communication:
 
 .. code-block:: shell
 
-    pip install modpoll
+    pip install 'modpoll2mqtt[serial]'
 
-Optionally, pyserial library can be installed for Modbus-RTU communication,
-
-.. code-block:: shell
-
-    pip install 'modpoll[serial]'
-
-Run the following command to check if there is new version available,
+Upgrade:
 
 .. code-block:: shell
 
-    pip install -U modpoll
+    pip install -U modpoll2mqtt
 
-On Windows, it's recommended to use ``pipx`` for installing *modpoll*. Refer to `pipx <https://pypa.github.io/pipx/installation/>`_ installation guide for detailed instructions.
-
-To install *modpoll*, open a Command Prompt terminal and run:
+On Windows, ``pipx`` is recommended. Refer to the `pipx <https://pypa.github.io/pipx/installation/>`_ installation guide.
 
 .. code-block:: shell
 
-    pipx install modpoll
-
-To upgrade *modpoll* to the latest version, use the following command:
+    pipx install modpoll2mqtt
 
 .. code-block:: shell
 
-    pipx upgrade modpoll
-
+    pipx upgrade modpoll2mqtt
 
 Uninstall
--------------------
-
-The program can be uninstalled by the following command,
+---------
 
 .. code-block:: shell
 
-    pip uninstall modpoll
+    pip uninstall modpoll2mqtt
 
-or,
-
-.. code-block:: shell
-
-    pipx uninstall modpoll
-
-
-Run with docker
----------------
-
-A docker image has been provided for user to directly use the tool
-without the local installation,
+or:
 
 .. code-block:: shell
 
-    docker run --rm topmaker/modpoll
-
-It shows the version of the tool by default.
+    pipx uninstall modpoll2mqtt

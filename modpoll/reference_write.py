@@ -53,14 +53,14 @@ def _get_encoder(poller: "Poller") -> RegisterEncoder:
 
 def _expect_bool_list(ref: "Reference", value, width: int, logger) -> bool:
     if not isinstance(value, list) or len(value) != width:
-        logger.error(
-            f"Reference '{ref.name}' expects a list of {width} booleans"
-        )
+        logger.error(f"Reference '{ref.name}' expects a list of {width} booleans")
         return False
     return True
 
 
-def write_reference(handler: "ModbusHandler", device_name: str, ref_name: str, value) -> bool:
+def write_reference(
+    handler: "ModbusHandler", device_name: str, ref_name: str, value
+) -> bool:
     dev = _find_device(handler, device_name)
     if dev is None:
         handler.logger.error(f"Device {device_name} not found")
@@ -97,9 +97,7 @@ def write_reference(handler: "ModbusHandler", device_name: str, ref_name: str, v
     return _write_register_reference(handler, dev, ref, poller, value)
 
 
-def _write_coil(
-    handler: "ModbusHandler", dev: "Device", address: int, value
-) -> bool:
+def _write_coil(handler: "ModbusHandler", dev: "Device", address: int, value) -> bool:
     try:
         result = _call_with_device_id(
             handler.modbus_client.write_coil,
@@ -113,9 +111,7 @@ def _write_coil(
         return False
 
 
-def _write_coils(
-    handler: "ModbusHandler", dev: "Device", address: int, values
-) -> bool:
+def _write_coils(handler: "ModbusHandler", dev: "Device", address: int, values) -> bool:
     try:
         result = _call_with_device_id(
             handler.modbus_client.write_coils,

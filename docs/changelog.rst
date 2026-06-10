@@ -1,26 +1,76 @@
 Changelog
 =========
 
-`1.7.0 <https://github.com/gavinying/modpoll/compare/v1.6.0...v1.7.0>`__ (2026-06-10)
+`2.0.0 <https://github.com/yoch/modpoll2mqtt/compare/v1.6.0...v2.0.0>`__ (2026-06-10)
 -------------------------------------------------------------------------------------
+
+Project
+~~~~~~~
+
+-  fork divergé de `modpoll <https://github.com/gavinying/modpoll>`__ ;
+   package PyPI renommé ``modpoll2mqtt``, dépôt ``yoch/modpoll2mqtt``
+-  commande CLI et module Python restent ``modpoll``
 
 Features
 ~~~~~~~~
 
-- Semantic MQTT write by CSV reference on ``modpoll/<device>/set`` with payload
-  ``ref`` and ``value`` (device from topic; scale, dtype, and endianness handled
-  automatically)
-- Subscribe pattern ``modpoll/+/set`` by default
+-  semantic MQTT write by CSV reference on ``modpoll/<device>/set`` with
+   payload ``ref`` and ``value`` (device from topic; scale, dtype, and
+   endianness handled automatically)
+-  subscribe pattern ``modpoll/+/set`` by default
 
-Breaking changes
+BREAKING CHANGES
 ~~~~~~~~~~~~~~~~
 
-- Removed low-level MQTT write format (``object_type``, ``address``, ``value``);
-  use topic + ``ref`` and ``value`` instead
-- Duplicate reference names on the same device now abort config loading
+-  removed low-level MQTT write format (``object_type``, ``address``,
+   ``value``); use topic + ``ref`` and ``value`` instead
+-  duplicate reference names on the same device now abort config loading
+   (previously warned and overwrote)
+
+.. _section-1:
+
+`1.6.0 <https://github.com/gavinying/modpoll/compare/v1.5.1...v1.6.0>`__ (2025-12-06)
+-------------------------------------------------------------------------------------
+
+.. _features-1:
+
+Features
+~~~~~~~~
+
+-  add bit-level access for boolean registers
+   (`cecf79d <https://github.com/gavinying/modpoll/commit/cecf79d24de79fdda7f524516fb163f35f392e3f>`__)
+-  add new argument ‘serial’ to support multiple framers, including
+   rtu/ascii/binary. Keep the old ‘rtu’ argument as an alias to ‘serial’
+   argument for backward compatibility.
+   (`d42ab78 <https://github.com/gavinying/modpoll/commit/d42ab78801d16c96cde852686f77ec6694776cf9>`__)
+-  add support for ascii framer
+   (`#97 <https://github.com/gavinying/modpoll/issues/97>`__)
+   (`c918e74 <https://github.com/gavinying/modpoll/commit/c918e74ca9e9c69c8fbf47712cb46300bf0630a9>`__)
+-  upgrade to python 3.10 and pymodbus 3.9.0
+   (`189b3fd <https://github.com/gavinying/modpoll/commit/189b3fd71876e64e9ef6e81b5832508fb451a37c>`__)
+
+Bug Fixes
+~~~~~~~~~
+
+-  bit syntax is only used with bool dtype
+   (`cf1e2b9 <https://github.com/gavinying/modpoll/commit/cf1e2b9b732c5de1639549b06744251a9b7e746e>`__)
+-  forward mqtt tls flags to handler
+   (`#93 <https://github.com/gavinying/modpoll/issues/93>`__)
+   (`d31db25 <https://github.com/gavinying/modpoll/commit/d31db252257cc4b8c1ddcd5b8cdca2c8072ca227>`__)
+-  guard mqtt cleanup on setup errors
+   (`#95 <https://github.com/gavinying/modpoll/issues/95>`__)
+   (`daa8c0c <https://github.com/gavinying/modpoll/commit/daa8c0c7d838468ba880397c5e38f98a3b0eb460>`__)
+-  incompatibility issues due to pymodbus 3.9+
+   (`d59a336 <https://github.com/gavinying/modpoll/commit/d59a336eb68758f2bd521158926a1c1c6171a995>`__)
+-  Sphinx build errors
+   (`2d06ee6 <https://github.com/gavinying/modpoll/commit/2d06ee64ebda3303e9c8be9ebecdf0808c72b3f7>`__)
+
+.. _section-2:
 
 `1.5.1 <https://github.com/gavinying/modpoll/compare/v1.5.0...v1.5.1>`__ (2025-09-29)
 -------------------------------------------------------------------------------------
+
+.. _bug-fixes-1:
 
 Bug Fixes
 ~~~~~~~~~
@@ -33,10 +83,12 @@ Bug Fixes
    (`#88 <https://github.com/gavinying/modpoll/issues/88>`__)
    (`bce269c <https://github.com/gavinying/modpoll/commit/bce269c3ce246ecf493b8a992c2f6e6293e7407e>`__)
 
-.. _section-1:
+.. _section-3:
 
 `1.5.0 <https://github.com/gavinying/modpoll/compare/v1.4.1...v1.5.0>`__ (2025-03-13)
 -------------------------------------------------------------------------------------
+
+.. _features-2:
 
 Features
 ~~~~~~~~
@@ -44,7 +96,7 @@ Features
 -  Update docker compose to conform to new specification
    (`abc55aa <https://github.com/gavinying/modpoll/commit/abc55aa363d76dc35b6a9731e31ab4b551a7b435>`__)
 
-.. _bug-fixes-1:
+.. _bug-fixes-2:
 
 Bug Fixes
 ~~~~~~~~~
@@ -70,12 +122,12 @@ Documentation
 -  Update screenshots
    (`e44ac1a <https://github.com/gavinying/modpoll/commit/e44ac1a33cb3806a665103e1e304e909c1a2f73a>`__)
 
-.. _section-2:
+.. _section-4:
 
 `1.4.1 <https://github.com/gavinying/modpoll/compare/v1.4.0...v1.4.1>`__ (2025-01-03)
 -------------------------------------------------------------------------------------
 
-.. _bug-fixes-2:
+.. _bug-fixes-3:
 
 Bug Fixes
 ~~~~~~~~~
@@ -92,12 +144,12 @@ Documentation
    (`8b4319c <https://github.com/gavinying/modpoll/commit/8b4319c014be71bb5ac121888cc7dd9b8f552765>`__),
    closes `#75 <https://github.com/gavinying/modpoll/issues/75>`__
 
-.. _section-3:
+.. _section-5:
 
 `1.4.0 <https://github.com/gavinying/modpoll/compare/v1.3.3...v1.4.0>`__ (2024-11-15)
 -------------------------------------------------------------------------------------
 
-.. _features-1:
+.. _features-3:
 
 Features
 ~~~~~~~~
@@ -111,7 +163,7 @@ Features
 -  Publish MQTT message for each single reference.
    (`adb869f <https://github.com/gavinying/modpoll/commit/adb869faeb375ec92d1158bd87c0389de7eceb09>`__)
 
-.. _bug-fixes-3:
+.. _bug-fixes-4:
 
 Bug Fixes
 ~~~~~~~~~
@@ -120,22 +172,9 @@ Bug Fixes
    (`#73 <https://github.com/gavinying/modpoll/issues/73>`__)
    (`8003ff3 <https://github.com/gavinying/modpoll/commit/8003ff33a42143766223f2b02307cd17409b4059>`__)
 
-.. _section-4:
+.. _section-6:
 
 `1.3.3 <https://github.com/gavinying/modpoll/compare/v1.3.2...v1.3.3>`__ (2024-10-15)
--------------------------------------------------------------------------------------
-
-.. _bug-fixes-4:
-
-Bug Fixes
-~~~~~~~~~
-
--  CI docs pipeline issue
-   (`ada4089 <https://github.com/gavinying/modpoll/commit/ada4089df1bb3063641820274a2c476d4a421321>`__)
-
-.. _section-5:
-
-`1.3.2 <https://github.com/gavinying/modpoll/compare/v1.3.1...v1.3.2>`__ (2024-10-15)
 -------------------------------------------------------------------------------------
 
 .. _bug-fixes-5:
@@ -143,15 +182,28 @@ Bug Fixes
 Bug Fixes
 ~~~~~~~~~
 
+-  CI docs pipeline issue
+   (`ada4089 <https://github.com/gavinying/modpoll/commit/ada4089df1bb3063641820274a2c476d4a421321>`__)
+
+.. _section-7:
+
+`1.3.2 <https://github.com/gavinying/modpoll/compare/v1.3.1...v1.3.2>`__ (2024-10-15)
+-------------------------------------------------------------------------------------
+
+.. _bug-fixes-6:
+
+Bug Fixes
+~~~~~~~~~
+
 -  CI pipeline issue
    (`9386455 <https://github.com/gavinying/modpoll/commit/9386455652025ea300dfdef5034738fa8936a66e>`__)
 
-.. _section-6:
+.. _section-8:
 
 `1.3.1 <https://github.com/gavinying/modpoll/compare/v1.3.0...v1.3.1>`__ (2024-10-14)
 -------------------------------------------------------------------------------------
 
-.. _bug-fixes-6:
+.. _bug-fixes-7:
 
 Bug Fixes
 ~~~~~~~~~
@@ -162,12 +214,12 @@ Bug Fixes
    mqtt-publish-topic-pattern.
    (`98230e8 <https://github.com/gavinying/modpoll/commit/98230e8e78c77e7a0334d101ac990f53e599ce1d>`__)
 
-.. _section-7:
+.. _section-9:
 
 `1.3.0 <https://github.com/gavinying/modpoll/compare/v1.2.0...v1.3.0>`__ (2024-10-13)
 -------------------------------------------------------------------------------------
 
-.. _features-2:
+.. _features-4:
 
 Features
 ~~~~~~~~
@@ -181,7 +233,7 @@ Features
    (`#64 <https://github.com/gavinying/modpoll/issues/64>`__)
    (`c44b597 <https://github.com/gavinying/modpoll/commit/c44b597f45a1c9fd8b3b49562d74f959d21cd1f0>`__)
 
-.. _bug-fixes-7:
+.. _bug-fixes-8:
 
 Bug Fixes
 ~~~~~~~~~
@@ -191,12 +243,12 @@ Bug Fixes
 -  Allow github action to read the PR title and add labels
    (`22cb7c8 <https://github.com/gavinying/modpoll/commit/22cb7c8dce284675193865c8fe399320bb0f2636>`__)
 
-.. _section-8:
+.. _section-10:
 
 `1.2.0 <https://github.com/gavinying/modpoll/compare/v1.1.0...v1.2.0>`__ (2024-08-25)
 -------------------------------------------------------------------------------------
 
-.. _features-3:
+.. _features-5:
 
 Features
 ~~~~~~~~
@@ -207,7 +259,7 @@ Features
 -  Add docker compose for better developer experience.
    (`01f15e8 <https://github.com/gavinying/modpoll/commit/01f15e8d140eadf3413471463fbb26cd7d8fc175>`__)
 
-.. _bug-fixes-8:
+.. _bug-fixes-9:
 
 Bug Fixes
 ~~~~~~~~~
@@ -217,12 +269,12 @@ Bug Fixes
 -  Typos
    (`9349864 <https://github.com/gavinying/modpoll/commit/9349864c5712fad3da9218d8f8b72529da5e03fa>`__)
 
-.. _section-9:
+.. _section-11:
 
 `1.1.0 <https://github.com/gavinying/modpoll/compare/1.0.0...v1.1.0>`__ (2024-08-03)
 ------------------------------------------------------------------------------------
 
-.. _features-4:
+.. _features-6:
 
 Features
 ~~~~~~~~
@@ -235,7 +287,7 @@ Features
    (`#52 <https://github.com/gavinying/modpoll/issues/52>`__)
    (`3e6681a <https://github.com/gavinying/modpoll/commit/3e6681a56497672c664a200e95728d7202a1964f>`__)
 
-.. _bug-fixes-9:
+.. _bug-fixes-10:
 
 Bug Fixes
 ~~~~~~~~~
@@ -261,17 +313,19 @@ Documentation
 -  update CHANGELOG.md
    (`73fcc01 <https://github.com/gavinying/modpoll/commit/73fcc010cb0ddbf4a1aa149ac28a354cd1bc5c39>`__)
 
-.. _section-10:
+.. _section-12:
 
 `1.0.0 <https://github.com/gavinying/modpoll/compare/0.8.4...1.0.0>`__ (2024-07-11)
 -----------------------------------------------------------------------------------
+
+.. _breaking-changes-1:
 
 ⚠ BREAKING CHANGES
 ~~~~~~~~~~~~~~~~~~
 
 -  Release v1.0.0
 
-.. _features-5:
+.. _features-7:
 
 Features
 ~~~~~~~~

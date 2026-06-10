@@ -1,246 +1,77 @@
-# Modpoll - A New Command-line Tool for Modbus and MQTT
+# modpoll2mqtt — Passerelle Modbus vers MQTT
 
-[![Release](https://img.shields.io/github/v/release/gavinying/modpoll)](https://img.shields.io/github/v/release/gavinying/modpoll)
-[![Build status](https://img.shields.io/github/actions/workflow/status/gavinying/modpoll/main.yml?branch=main)](https://github.com/gavinying/modpoll/actions/workflows/main.yml?query=branch%3Amain)
-[![License](https://img.shields.io/github/license/gavinying/modpoll)](https://img.shields.io/github/license/gavinying/modpoll)
-[![Downloads](https://static.pepy.tech/badge/modpoll/week)](https://pepy.tech/project/modpoll)
+[![Release](https://img.shields.io/github/v/release/yoch/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/releases)
+[![Build status](https://img.shields.io/github/actions/workflow/status/yoch/modpoll2mqtt/main.yml?branch=main)](https://github.com/yoch/modpoll2mqtt/actions/workflows/main.yml?query=branch%3Amain)
+[![License](https://img.shields.io/github/license/yoch/modpoll2mqtt)](https://github.com/yoch/modpoll2mqtt/blob/main/LICENSE)
+[![Downloads](https://static.pepy.tech/badge/modpoll2mqtt/week)](https://pepy.tech/project/modpoll2mqtt)
 
-> 📢 **Announcement:** Since the release of v1.3.0, our official dockerhub namespace has been changed to `topmaker`, you can pull the latest images from [topmaker/modpoll](https://hub.docker.com/repository/docker/topmaker/modpoll) at dockerhub.
+> Documentation : [yoch.github.io/modpoll2mqtt](https://yoch.github.io/modpoll2mqtt)
 
-> Learn more about *modpoll* usage at [documentation](https://gavinying.github.io/modpoll) site.
+**modpoll2mqtt** est une passerelle Modbus → MQTT en ligne de commande. Elle interroge des équipements Modbus (RTU, TCP, UDP) selon un fichier CSV de configuration, publie les valeurs sur un broker MQTT et accepte des commandes d’écriture par référence.
 
-## Motivation
+Le package s’installe sous le nom PyPI `modpoll2mqtt` ; la commande exécutable reste `modpoll`.
 
-The idea for creating this tool originated from my need to efficiently check new devices during site surveys. These surveys are often time-constrained and space-limited, with on-site work adding to the pressure. In such situations, a portable Swiss Army knife toolkit becomes a valuable companion.
+Fork de [modpoll](https://github.com/gavinying/modpoll), avec notamment l’écriture MQTT sémantique par `ref` + `value` et des exemples CTA (centrales de traitement d’air).
 
-This tool can be easily deployed on a Raspberry Pi or similar embedded devices, polling data from a Modbus network or connected devices. Users can choose to log the data locally or publish it to an MQTT broker for further troubleshooting.
+## Fonctionnalités
 
-The MQTT broker can be set up either on the same Raspberry Pi or in the cloud. Once data is successfully published, users can subscribe to the relevant MQTT topics and conveniently view the data on their smartphones.
-
-<p align="center">
-  <img src="docs/assets/modpoll-usage.png">
-</p>
-
-Moreover, you can also run this tool continuously on a server as a Modbus-MQTT gateway, i.e. polling from local Modbus devices and forwarding data to a centralized cloud service.
-
-In fact, *modpoll* helps to bridge between the traditional field-bus world and the new IoT world.
-
-> 💡 **Tips:** This tool is designed to be a standalone executable application, which works out-of-the-box on Linux/macOS/Windows. If you are looking for a Modbus python library, please consider the following great open-source projects, [pymodbus](https://github.com/riptideio/pymodbus) or [minimalmodbus](https://github.com/pyhys/minimalmodbus)
-
-
-## Feature
-
-- Support Modbus RTU/TCP/UDP devices
-- Show polling data for local debugging, like a typical modpoll tool
-- Publish polling data to MQTT broker for remote debugging, especially on smart phone
-- Export polling data to local storage for further investigation
-- Provide docker solution for continuous data polling use case
-
+- Modbus RTU, TCP et UDP (fichiers CSV de configuration)
+- Affichage local des données pollées (mode debug)
+- Publication MQTT des références (topics configurables)
+- Écriture MQTT par nom de référence CSV (`modpoll/<device>/set`)
+- Export CSV local des données
+- Accès bit à bit sur registres et coils
 
 ## Installation
 
-This tool tested on Python 3.10+ (Ubuntu 22.04+ or equivalent), the package is available in the [Python Package Index](https://pypi.org/), users can easily install it using `pip` or `pipx`. Ubuntu 20.04 and Python 3.8 are no longer supported.
-
-### Using PIP
-
-Install *modpoll* using the following command,
+Python 3.10+ requis.
 
 ```bash
-pip install modpoll
+pip install modpoll2mqtt
 ```
 
-Optionally, [pyserial](https://pyserial.readthedocs.io/) library can be installed for Modbus-RTU communication,
+Option Modbus série (pyserial) :
 
 ```bash
-pip install 'modpoll[serial]'
+pip install 'modpoll2mqtt[serial]'
 ```
 
-Upgrade the tool via the following command,
+Mise à jour :
 
 ```bash
-pip install -U modpoll
+pip install -U modpoll2mqtt
 ```
 
-### On Windows
+Sous Windows, [pipx](https://pypa.github.io/pipx/installation/) est recommandé :
 
-It is recommended to use `pipx` for installing *modpoll* on Windows, refer to [here](https://pypa.github.io/pipx/installation/) for more information about `pipx`.
-
-Once `pipx` installed, you can run the following command in a Command Prompt terminal.
-
-```PowerShell
-pipx install modpoll
-```
-
-Upgrade the tool via the following command,
-
-```PowerShell
-pipx upgrade modpoll
+```powershell
+pipx install modpoll2mqtt
 ```
 
 ## Quickstart
 
-*modpoll* is a python tool for communicating with Modbus devices, so ideally it makes more sense if you have a real Modbus device on hand for the following test, but it is OK if you don't, we provide a virtual Modbus TCP device deployed at `modsim.topmaker.net:502` for your quick testing purpose.
-
-Let's start exploring *modpoll* with *modsim* device, run the following command to get a first glimpse,
+Lecture unique d’un équipement Modbus TCP (remplacer l’adresse IP par la vôtre) :
 
 ```bash
 modpoll --once \
-  --tcp modsim.topmaker.net \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
+  --tcp 192.168.1.10 \
+  --config examples/modsim.csv
 ```
 
-<p align="center">
-  <img src="docs/assets/screenshot-modpoll.png">
-</p>
-
-> the modsim code is also available [here](https://github.com/gavinying/modsim)
-
-### Modbus ASCII and framers
-
-- Serial transports: use `--serial PORT --framer ascii` (alias: `--rtu` still accepted); pyserial URLs such as `socket://host:port` and `rfc2217://host:port` work for serial-over-TCP tunnels.
-- Serial supports framers `ascii` and `rtu` (pymodbus defaults to RTU if `--framer default`). Binary framer is no longer supported in pymodbus 3.9+.
-
-### Configuration pitfalls
-
-- On **coil** or **discrete_input** pollers, use `bool` with the **absolute Modbus coil address** to publish a single boolean (e.g. `ref,BP_MA,5,bool,r`).
-- Use `bool8` / `bool16` on coil/discrete_input pollers for legacy grouped reads (8 or 16 booleans per ref). The address is a **legacy group index** aligned with existing configs (`0` = first 8 coils at addresses 0–7; `1` = next 8 at addresses 8–15, i.e. coils 9–16 in 1-based tables — see `modsim.csv` `coil09-16`). If the poll ends before the full group is read, missing bits are **padded with `false`** (same for `bool8` and `bool16`).
-- On **holding_register** or **input_register** pollers, use `bool` with `address:bit` (0-15), e.g. `40019:15,bool`. The `address:bit` syntax is **not** supported on coil/discrete_input pollers.
-- `<endian>` on coil/discrete_input pollers is ignored for `bool` refs (values are read directly from `result.bits`).
-- `<endian>` must be exactly `BE_BE`, `LE_BE`, `LE_LE`, or `BE_LE`.
-- Leave `<scale>` empty to disable scaling; `0` is not supported as a multiplier.
-- `--autoremove` disables a poller after 3 consecutive Modbus failures on that poller.
-
-### Prepare Modbus configure file
-
-The reason we can magically poll data from the online device *modsim* is because we have already provided the [Modbus configure file](https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv) for *modsim* device as following,
-
-```CSV
-device,modsim01,1,,
-poll,coil,0,16,BE_BE
-ref,coil01-08,0,bool8,rw
-ref,coil09-16,1,bool8,rw
-poll,discrete_input,10000,16,BE_BE
-ref,di01-08,10000,bool8,rw
-ref,di09-16,10001,bool8,rw
-poll,input_register,30000,20,BE_BE
-ref,input_reg01,30000,uint16,rw
-ref,input_reg02,30001,uint16,rw
-ref,input_reg03,30002,uint16,rw
-ref,input_reg04,30003,uint16,rw
-ref,input_reg05,30004,int16,rw
-ref,input_reg06,30005,int16,rw
-ref,input_reg07,30006,int16,rw
-ref,input_reg08,30007,int16,rw
-ref,input_reg09,30008,uint32,rw
-ref,input_reg10,30010,uint32,rw
-ref,input_reg11,30012,int32,rw
-ref,input_reg12,30014,int32,rw
-ref,input_reg13,30016,float32,rw
-ref,input_reg14,30018,float32,rw
-poll,holding_register,40000,44,BE_BE
-ref,holding_reg01,40000,uint16,rw
-ref,holding_reg02,40001,uint16,rw
-ref,holding_reg03,40002,uint16,rw
-ref,holding_reg04,40003,uint16,rw
-ref,holding_reg05,40004,int16,rw
-ref,holding_reg06,40005,int16,rw
-ref,holding_reg07,40006,int16,rw
-ref,holding_reg08,40007,int16,rw
-ref,holding_reg09,40008,uint32,rw
-ref,holding_reg10,40010,uint32,rw
-ref,holding_reg11,40012,int32,rw
-ref,holding_reg12,40014,int32,rw
-ref,holding_reg13,40016,float32,rw
-ref,holding_reg14,40018,float32,rw
-ref,holding_reg15,40020,uint64,rw
-ref,holding_reg16,40024,int64,rw
-ref,holding_reg17,40028,float64,rw
-ref,holding_reg18,40032,float64,rw
-ref,holding_reg19,40036,string16,rw
-```
-
-This configuration tells *modpoll* to do the following for each poll,
-
-- Read `16` coils from the address starting from `0` and parse the response as two 8-bits boolean values;
-- Read `16` discrete inputs from the address starting from `10000` and parse the response as two 8-bits boolean values;
-- Read `20` input registers from the address starting from `30000` and parse data accordingly;
-- Read `44` holding registers from the address starting from `40000` and parse data accordingly;
-
-> Notice the holding registers contain a 16-byte long string, which counts as 8 registers in poll size, because Modbus protocol defines a holding register as 2-byte width.
-
-In practical, you usually need to customize a Modbus configuration file for your own device before running *modpoll* tool, which defines the optimal polling patterns and register mappings according to device vendor's documents.
-
-You can also take a look at [contrib](https://github.com/gavinying/modpoll/tree/main/contrib) folder, which collects a few types of device configuration shared by contributors.
-
-The configuration can be either a local file or a remote public URL resource.
-
-> *Refer to the [documentation](https://gavinying.github.io/modpoll/configure.html) site for more details.*
-
-### Poll local device (modsim)
-
-If you are blocked by company firewall for online device or prefer a local test, you can launch your own device simulator by running *modsim* locally,
-
-```bash
-docker run --rm -p 5020:5020 topmaker/modsim
-```
-
-It will create a virtual Modbus TCP device running at `localhost:5020`, and you can open a new terminal, poll the virtual device using *modpoll* tool,
+Publication vers un broker MQTT :
 
 ```bash
 modpoll \
-  --tcp localhost \
-  --tcp-port 5020 \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
-```
-
-> Use `sudo` before the docker command if you want to use the standard port `502`.
-
-```bash
-sudo docker run --rm -p 502:5020 topmaker/modsim
-```
-
-In a new terminal,
-
-```
-modpoll \
-  --tcp localhost \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
-```
-
-### Publish data to MQTT broker
-
-This is a useful function of this new *modpoll* tool, which provides a simple way to publish collected Modbus data to MQTT broker, so users can view data from a smart phone via a MQTT client.
-
-The following example uses a public MQTT broker `broker.emqx.io` for test purpose. You can also set up your own MQTT broker locally using [mosquitto](https://mosquitto.org/download/).
-
-```bash
-modpoll \
-  --tcp modsim.topmaker.net \
+  --tcp 192.168.1.10 \
   --mqtt-host broker.emqx.io \
-  --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
+  --config examples/modsim.csv
 ```
 
-With successful data polling and publishing, you can subscribe the default data topic `modpoll/modsim01/data` on the same MQTT broker `broker.emqx.io` to view the collected data.
+Les données sont publiées sur `modpoll/<device_name>/data` par défaut.
 
-The MQTT topics can be customized by providing the following arguments,
+### Écriture par référence MQTT
 
-  - `mqtt-publish-topic-pattern`
-  - `mqtt-subscribe-topic-pattern`
-  - `mqtt-diagnostics-topic-pattern`
-
-See [document](https://gavinying.github.io/modpoll/usage.html#Named%20Arguments) for details.
-
-
-<p align="center">
-  <img src="docs/assets/screencast-modpoll-mqtt.gif">
-</p>
-
-
-### Write references via MQTT
-
-Once connected to an MQTT broker, *modpoll* subscribes to `modpoll/+/set` by default. Publish to `modpoll/<device>/set` with a JSON payload to write a CSV reference using the same decoded/scaled values as the data publish:
-
-Topic: `modpoll/cta_conf/set`
+Une fois connecté au broker, `modpoll` s’abonne à `modpoll/+/set`. Publier sur `modpoll/<device>/set` :
 
 ```json
 {
@@ -249,106 +80,47 @@ Topic: `modpoll/cta_conf/set`
 }
 ```
 
-- the **device** is taken from the topic (`cta_conf` above), not from the JSON payload
-- `ref` — reference name from the CSV (`ref,<name>,...` row); the pair `(device, ref)` must be unique
-- `value` — engineering value (decoded type and scale from the CSV are applied automatically on write)
+Exemple avec [`examples/CTA/cta_conf_restaurant.csv`](examples/CTA/cta_conf_restaurant.csv) : une référence `int16` avec échelle `0.1` accepte `21.5` en entrée ; la valeur brute `215` est écrite dans le registre.
 
-Example with [`examples/CTA/cta_conf_restaurant.csv`](examples/CTA/cta_conf_restaurant.csv): a reference defined as `int16` with scale `0.1` and unit `°C` accepts `21.5` in the command; modpoll writes the raw register value `215`.
+**Migration depuis modpoll 1.6.x :** le format bas niveau (`object_type`, `address`, `value`) n’est plus supporté.
 
-The subscribe topic pattern can be customized with `--mqtt-subscribe-topic-pattern` (default: `modpoll/+/set`).
+### Pièges de configuration
 
-**Migration from 1.6.x:** the low-level write format (`object_type`, `address`, `value`) was removed. Use the topic for the device name and `ref` + `value` in the payload instead.
+- Sur les pollers **coil** / **discrete_input**, utiliser `bool` avec l’**adresse Modbus absolue** pour un seul booléen.
+- `bool8` / `bool16` : lectures groupées legacy (index de groupe, pas adresse coil directe).
+- Sur **holding_register** / **input_register**, `bool` avec `adresse:bit` (0–15), ex. `40019:15,bool`.
+- `<endian>` : `BE_BE`, `LE_BE`, `LE_LE` ou `BE_LE` uniquement.
+- `--autoremove` : désactive un poller après 3 échecs Modbus consécutifs.
 
+## Exemples
 
-## Run with docker
+```bash
+# Modbus TCP
+modpoll --tcp 192.168.1.10 --config examples/modsim.csv
 
-A docker image has been provided for user to directly run the tool without local installation,
+# Modbus série
+modpoll --serial /dev/ttyUSB0 --serial-baud 9600 --config contrib/eniwise/scpms6.csv
 
-  ```bash
-  docker run --rm topmaker/modpoll
-  ```
+# MQTT + export CSV
+modpoll --tcp 192.168.1.10 --mqtt-host localhost --export data.csv --config examples/modsim.csv
 
-It shows the version of the tool by default.
+# Plusieurs fichiers de config
+modpoll --tcp 192.168.1.10 --config examples/modsim.csv examples/modsim2.csv
 
-Similar to the above *modsim* test, we can poll data with `docker run`, in order to avoid printing out received data, the argument `--daemon` or `-d` is recommended to use with docker.
+# CTA (exemple métier)
+modpoll --tcp 192.168.1.20 --mqtt-host localhost --config examples/CTA/cta_conf_restaurant.csv
+```
 
-  ```bash
-  docker run --rm topmaker/modpoll \
-    modpoll -d \
-      --tcp modsim.topmaker.net \
-      --config https://raw.githubusercontent.com/gavinying/modpoll/main/examples/modsim.csv
-  ```
-
-If you want to load a local configure file, you need to mount a local folder onto container volume,
-for example, if the child folder `examples` contains the config file `modsim.csv`, we can use it via the following command,
-
-  ```bash
-  docker run --rm -v $(pwd)/examples:/app/examples topmaker/modpoll \
-    modpoll -d \
-      --tcp modsim.topmaker.net \
-      --config /app/examples/modsim.csv
-  ```
-
-
-## Example Use Cases
-
-- Connect to Modbus TCP device
-
-  ```bash
-  modpoll \
-    --tcp 192.168.1.10 \
-    --config examples/modsim.csv
-  ```
-
-- Connect to Modbus serial device
-
-  ```bash
-  modpoll \
-    --serial /dev/ttyUSB0 \
-    --serial-baud 9600 \
-    --config contrib/eniwise/scpms6.csv
-  ```
-
-- Connect to Modbus TCP device and publish data to MQTT broker
-
-  ```bash
-  modpoll \
-    --tcp modsim.topmaker.net \
-    --mqtt-host broker.emqx.io \
-    --config examples/modsim.csv
-  ```
-
-- Connect to Modbus TCP device and export data to local csv file
-
-  ```bash
-  modpoll \
-    --tcp modsim.topmaker.net \
-    --export data.csv \
-    --config examples/modsim.csv
-  ```
-
-- Connect to Modbus TCP devices using multiple config files
-
-  ```bash
-  modpoll \
-    --tcp modsim.topmaker.net \
-    --config examples/modsim.csv examples/modsim2.csv
-  ```
-
-
-> Refer to the [documentation](https://gavinying.github.io/modpoll) site for more details about the configuration and examples.
-
-> *If you find this tool useful, please support us by starring 🌟 our repository to encourage further improvements.*
+Voir le dossier [`examples/`](examples/) et [`contrib/`](contrib/) pour d’autres configurations.
 
 ## Credits
 
-The implementation of this project is heavily inspired by the following two projects:
-- https://github.com/owagner/modbus2mqtt (MIT license)
-- https://github.com/mbs38/spicierModbus2mqtt (MIT license)
+Ce projet s’appuie sur :
 
-Thanks to Max Brueggemann and Oliver Wagner for their great work.
+- [modpoll](https://github.com/gavinying/modpoll) — Ying Shaodong (MIT)
+- [modbus2mqtt](https://github.com/owagner/modbus2mqtt) — Oliver Wagner (MIT)
+- [spicierModbus2mqtt](https://github.com/mbs38/spicierModbus2mqtt) — Max Brueggemann (MIT)
 
+## Licence
 
-## License
-
-MIT © 2021-2026, Ying Shaodong
+MIT — voir [LICENSE](LICENSE).

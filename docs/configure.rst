@@ -18,7 +18,7 @@ Here is the basic structure of modbus configure file.
 Example 1: Modsim device (Modbus TCP device)
 --------------------------------------------------------
 
-This online Modbus TCP device simulator is designed for user to quickly test the modpoll functions.
+This example configuration is included for local testing with a Modbus TCP simulator or device.
 
 Here is an example of modbus configure file for reading modsim device.
 

@@ -39,9 +39,7 @@ class FakeModbusMaster:
         return FakeModbusResult()
 
     def read_holding_registers(self, address, *, count=1, device_id=1):
-        return FakeModbusResult(
-            registers=self.registers[address : address + count]
-        )
+        return FakeModbusResult(registers=self.registers[address : address + count])
 
     def write_register(self, address, value, device_id=1):
         self.writes.append(("register", address, value))

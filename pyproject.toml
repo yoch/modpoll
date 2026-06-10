@@ -1,12 +1,28 @@
 [tool.poetry]
-name = "modpoll"
-version = "1.7.0"
-description = "A New Command-line Tool for Modbus and MQTT"
-authors = ["Ying Shaodong <helloysd@gmail.com>"]
-repository = "https://github.com/gavinying/modpoll"
-documentation = "https://gavinying.github.io/modpoll"
+name = "modpoll2mqtt"
+version = "2.0.0"
+description = "Passerelle Modbus vers MQTT — fork de modpoll"
+authors = ["yoch <yoch.melka@gmail.com>"]
+repository = "https://github.com/yoch/modpoll2mqtt"
+documentation = "https://yoch.github.io/modpoll2mqtt"
+homepage = "https://github.com/yoch/modpoll2mqtt"
 readme = "README.md"
 packages = [{ include = "modpoll" }]
+license = "MIT"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Networking",
+    "Topic :: Home Automation",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"

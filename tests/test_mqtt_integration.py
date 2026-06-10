@@ -44,7 +44,9 @@ def test_mqtt_integration_connect(mqtt_broker, unique_mqtt_client_id):
 
 
 @pytest.mark.integration
-def test_mqtt_integration_publish_qos0(mqtt_broker, unique_mqtt_client_id, unique_mqtt_topic):
+def test_mqtt_integration_publish_qos0(
+    mqtt_broker, unique_mqtt_client_id, unique_mqtt_topic
+):
     handler = _make_handler(mqtt_broker, unique_mqtt_client_id, qos=0)
     try:
         _connect(handler)
@@ -56,7 +58,9 @@ def test_mqtt_integration_publish_qos0(mqtt_broker, unique_mqtt_client_id, uniqu
 
 
 @pytest.mark.integration
-def test_mqtt_integration_publish_qos1(mqtt_broker, unique_mqtt_client_id, unique_mqtt_topic):
+def test_mqtt_integration_publish_qos1(
+    mqtt_broker, unique_mqtt_client_id, unique_mqtt_topic
+):
     handler = _make_handler(mqtt_broker, unique_mqtt_client_id, qos=1)
     try:
         _connect(handler)
@@ -100,9 +104,7 @@ def test_mqtt_integration_subscribe_and_receive(
 
 @pytest.mark.integration
 def test_mqtt_integration_mqtt_v311_connect(mqtt_broker, unique_mqtt_client_id):
-    handler = _make_handler(
-        mqtt_broker, unique_mqtt_client_id, mqtt_version="3.1.1"
-    )
+    handler = _make_handler(mqtt_broker, unique_mqtt_client_id, mqtt_version="3.1.1")
     try:
         _connect(handler)
     finally:

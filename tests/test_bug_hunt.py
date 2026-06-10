@@ -505,7 +505,9 @@ def test_shared_slave_id_adjacent_ranges_no_overlap_warning(caplog):
     with caplog.at_level("WARNING"):
         devices = handler._parse_config(csv.reader(io.StringIO(config)))
     assert len(devices) == 2
-    assert "Modbus slave ID 1 shared by logical devices: cta_conf, cta_rest" in caplog.text
+    assert (
+        "Modbus slave ID 1 shared by logical devices: cta_conf, cta_rest" in caplog.text
+    )
     assert "Overlapping Modbus poll ranges" not in caplog.text
 
 

@@ -1,14 +1,12 @@
-# Contributing to `Modpoll`
+# Contributing to modpoll2mqtt
 
-Contributions are welcome and greatly appreciated! Every little bit helps, and credit will always be given.
-
-You can contribute in many ways:
+Contributions are welcome. Every little bit helps, and credit will always be given.
 
 ## Types of Contributions
 
 ### Report Bugs
 
-Report bugs at [https://github.com/gavinying/modpoll/issues](https://github.com/gavinying/modpoll/issues).
+Report bugs at [https://github.com/yoch/modpoll2mqtt/issues](https://github.com/yoch/modpoll2mqtt/issues).
 
 When reporting a bug, please include:
 
@@ -26,11 +24,11 @@ Look through the GitHub issues for features. Anything tagged with "enhancement" 
 
 ### Write Documentation
 
-`modpoll` could always use more documentation, whether as part of the official docs, in docstrings, or even on the web in blog posts, articles, and such.
+`modpoll2mqtt` could always use more documentation, whether as part of the official docs, in docstrings, or even on the web in blog posts, articles, and such.
 
 ### Submit Feedback
 
-The best way to send feedback is to file an issue at [https://github.com/gavinying/modpoll/issues](https://github.com/gavinying/modpoll/issues).
+The best way to send feedback is to file an issue at [https://github.com/yoch/modpoll2mqtt/issues](https://github.com/yoch/modpoll2mqtt/issues).
 
 If you are proposing a new feature:
 
@@ -40,15 +38,15 @@ If you are proposing a new feature:
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `modpoll` for local development.
+Ready to contribute? Here's how to set up the project for local development.
 
 Here we assume you already have `python`, `poetry`, and `Git` installed. Otherwise, you can use the [asdf](https://github.com/asdf-vm/asdf) tool to manage the required tools or install them manually according to the `.tool-versions` file.
 
-1. Fork the `modpoll` repo on GitHub, and then clone your fork locally,
+1. Fork the `modpoll2mqtt` repo on GitHub, and then clone your fork locally,
 
     ```bash
-    git clone https://github.com/your-username/modpoll.git
-    cd modpoll
+    git clone https://github.com/your-username/modpoll2mqtt.git
+    cd modpoll2mqtt
     ```
 
 2. Install and activate the dev environment,
@@ -87,7 +85,7 @@ Here we assume you already have `python`, `poetry`, and `Git` installed. Otherwi
     git push origin your-branch-name
     ```
 
-    Please note this project follows [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for git commits. Some of our CI/CD pipelines rely on such convention, for example, your commit message starting with `feat:` might bump the `MINOR` version.
+    Please note this project follows [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for git commits.
 
 7. Submit a pull request through the GitHub website.
 

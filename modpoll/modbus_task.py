@@ -210,9 +210,7 @@ class Poller:
                 f"Unsupported dtype '{ref.dtype}' on coil/discrete_input poller"
             )
 
-    def _decode_and_update_reference(
-        self, ref: "Reference", decoder: RegisterDecoder
-    ):
+    def _decode_and_update_reference(self, ref: "Reference", decoder: RegisterDecoder):
         if ref.dtype == "bool" and ref.bit is not None:
             # Bit references read a 16-bit register and extract one bit.
             register_value = decoder.decode_16bit_uint()
@@ -689,9 +687,7 @@ class ModbusHandler:
                     if isinstance(ref_val, list):
                         for i, entry in enumerate(ref_val):
                             msg = (
-                                json.dumps(entry)
-                                if isinstance(entry, bool)
-                                else entry
+                                json.dumps(entry) if isinstance(entry, bool) else entry
                             )
                             self.mqtt_handler.publish(f"{topic}/{i}", msg)
                     else:
