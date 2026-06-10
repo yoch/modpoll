@@ -6,6 +6,10 @@
 
 * add `--mqtt-keys name-only` to publish MQTT JSON keys without appending `|unit` (default remains `name-with-unit`)
 
+### BREAKING CHANGES
+
+* renamed `--daemon` / `-d` to `--no-output` (suppresses poll result tables only; does not fork)
+
 ## [2.0.0](https://github.com/yoch/modpoll2mqtt/compare/v1.6.0...v2.0.0) (2026-06-10)
 
 ### Project

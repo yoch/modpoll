@@ -116,7 +116,7 @@ def test_failed_modbus_connect_clears_poll_success_and_skips_mqtt():
         "dummy.csv",
         mqtt_handler=mqtt,
         mqtt_publish_topic_pattern="t/{{device_name}}",
-        daemon=True,
+        no_output=True,
     )
     handler.deviceList = [device]
 
@@ -232,7 +232,7 @@ def test_autoremove_disables_poller_after_three_failures():
         MagicMock(),
         "dummy.csv",
         autoremove=True,
-        daemon=True,
+        no_output=True,
     )
     handler.deviceList = [device]
     handler.modbus_client = master
@@ -253,7 +253,7 @@ def test_autoremove_without_flag_keeps_poller_enabled():
         MagicMock(),
         "dummy.csv",
         autoremove=False,
-        daemon=True,
+        no_output=True,
     )
     handler.deviceList = [device]
     handler.modbus_client = MagicMock()
@@ -409,7 +409,7 @@ def test_autoremove_on_connect_failure():
         MagicMock(),
         "dummy.csv",
         autoremove=True,
-        daemon=True,
+        no_output=True,
     )
     handler.deviceList = [device]
 

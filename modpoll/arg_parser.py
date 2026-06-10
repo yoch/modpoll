@@ -33,10 +33,9 @@ def get_parser():
         ),
     )
     parser.add_argument(
-        "-d",
-        "--daemon",
+        "--no-output",
         action="store_true",
-        help="Run in daemon mode without printing result",
+        help="Do not print poll results to stdout (useful under systemd)",
     )
     parser.add_argument(
         "-r",

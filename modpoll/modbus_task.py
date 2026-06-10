@@ -377,7 +377,7 @@ class ModbusHandler:
         mqtt_handler: Optional[MqttHandler] = None,
         timeout: float = 3.0,
         interval: float = 0.5,
-        daemon: bool = False,
+        no_output: bool = False,
         mqtt_publish_topic_pattern: Optional[str] = None,
         mqtt_diagnostics_topic_pattern: Optional[str] = None,
         mqtt_single_publish: bool = False,
@@ -392,7 +392,7 @@ class ModbusHandler:
         self.mqtt_handler = mqtt_handler
         self.timeout = timeout
         self.interval = interval
-        self.daemon = daemon
+        self.no_output = no_output
         self.mqtt_publish_topic_pattern = mqtt_publish_topic_pattern
         self.mqtt_diagnostics_topic_pattern = mqtt_diagnostics_topic_pattern
         self.mqtt_single_publish = mqtt_single_publish
@@ -643,7 +643,7 @@ class ModbusHandler:
                     if on_threading_event():
                         return
                     delay_thread(timeout=self.interval)
-        if not self.daemon:
+        if not self.no_output:
             self.print_results()
 
     def has_device(self, device_name: str) -> bool:
@@ -795,7 +795,7 @@ def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
             mqtt_handler,
             timeout=args.timeout,
             interval=args.interval,
-            daemon=args.daemon,
+            no_output=args.no_output,
             mqtt_publish_topic_pattern=args.mqtt_publish_topic_pattern,
             mqtt_diagnostics_topic_pattern=args.mqtt_diagnostics_topic_pattern,
             mqtt_single_publish=args.mqtt_single,

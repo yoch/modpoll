@@ -15,7 +15,7 @@ def _reset_modbus_backoff():
 
 
 def _handler_with_empty_poll(client):
-    handler = ModbusHandler(client, "dummy.csv", daemon=True)
+    handler = ModbusHandler(client, "dummy.csv", no_output=True)
     device = Device("dev", 1)
     device.pollerList = []
     handler.deviceList = [device]
@@ -56,7 +56,7 @@ def test_on_connect_failure_autoremove_after_three_cycles():
     poller = Poller(device, 3, 0, 1, "BE_BE")
     device.pollerList = [poller]
 
-    handler = ModbusHandler(client, "dummy.csv", autoremove=True, daemon=True)
+    handler = ModbusHandler(client, "dummy.csv", autoremove=True, no_output=True)
     handler.deviceList = [device]
 
     for _ in range(3):
