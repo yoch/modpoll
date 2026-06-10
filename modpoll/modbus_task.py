@@ -11,12 +11,13 @@ from pymodbus.exceptions import ModbusException
 from pymodbus.framer import FramerType
 
 from .register_decode import ENDIAN_MAP, Endian, RegisterDecoder
-from .reference_write import write_reference as _write_reference
+from .reference_write import _find_device, write_reference as _write_reference
 from .utils import on_threading_event, delay_thread
 from .mqtt_task import MqttHandler
 
 
 FLOAT_TYPE_PRECISION = 3
+MODBUS_WRITE_INTERVAL = 0.1
 _MODBUS_BACKOFF_BASE = 1.0
 _MODBUS_BACKOFF_MAX = 60.0
 _modbus_connect_failures = 0
@@ -651,6 +652,44 @@ class ModbusHandler:
 
     def write_reference(self, device_name: str, ref_name: str, value) -> bool:
         return _write_reference(self, device_name, ref_name, value)
+
+    def write_references(
+        self,
+        device_name: str,
+        ref_values: dict,
+        *,
+        interval: float = MODBUS_WRITE_INTERVAL,
+    ) -> None:
+        dev = _find_device(self, device_name)
+        if dev is None:
+            return
+
+        writes = []
+        for ref_name, value in ref_values.items():
+            if ref_name not in dev.references:
+                self.logger.warning(
+                    f"Unknown reference '{ref_name}' on device {device_name}, skipping"
+                )
+                continue
+            writes.append((ref_name, value))
+
+        if not writes:
+            self.logger.warning(
+                f"No known references in write payload for device={device_name}"
+            )
+            return
+
+        ok_count = 0
+        for i, (ref_name, value) in enumerate(writes):
+            if self.write_reference(device_name, ref_name, value):
+                ok_count += 1
+            if i < len(writes) - 1:
+                delay_thread(interval)
+
+        if ok_count:
+            self.logger.info(
+                f"Wrote {ok_count} value(s) for device={device_name}"
+            )
 
     def print_results(self):
         for dev in self.deviceList:

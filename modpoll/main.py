@@ -188,58 +188,36 @@ def app(name="modpoll"):
 
                 try:
                     command = json.loads(payload)
-                    ref_name = command["ref"]
-                    value = command["value"]
-                except KeyError as e:
-                    logger.error(f"Missing required key in payload: {e}")
-                    continue
                 except json.JSONDecodeError:
                     logger.error(f"Failed to parse JSON message: {payload}")
                     continue
 
-                if "device" in command:
-                    logger.debug(
-                        "Ignoring 'device' in write payload; device is taken from topic"
-                    )
+                if not isinstance(command, dict):
+                    logger.error("MQTT write payload must be a JSON object")
+                    continue
 
-                logger.info(
-                    f"Received write request for device={device_name}, ref={ref_name}"
-                )
+                if not command:
+                    logger.warning(f"Empty MQTT write payload for device={device_name}")
+                    continue
+
                 device_found = False
-                write_success = False
-                connect_failed = False
                 for modbus_handler in modbus_handlers:
                     if not modbus_handler.has_device(device_name):
                         continue
                     device_found = True
                     if not modbus_connect(modbus_client):
-                        connect_failed = True
+                        logger.error(
+                            f"Modbus connect failed for write: device={device_name}"
+                        )
                     else:
                         try:
-                            write_success = modbus_handler.write_reference(
-                                device_name, ref_name, value
-                            )
+                            modbus_handler.write_references(device_name, command)
                         finally:
                             modbus_close(modbus_client)
                     break
 
                 if not device_found:
                     logger.error(f"No device found with name: {device_name}")
-                elif connect_failed:
-                    logger.error(
-                        f"Modbus connect failed for write: device={device_name}, "
-                        f"ref={ref_name}"
-                    )
-                elif write_success:
-                    logger.info(
-                        f"Successfully wrote device={device_name}, ref={ref_name}, "
-                        f"value={value}"
-                    )
-                else:
-                    logger.warning(
-                        f"Failed to write device={device_name}, ref={ref_name}, "
-                        f"value={value}"
-                    )
         if args.once:
             set_threading_event()
             break

@@ -75,10 +75,12 @@ Once connected to the broker, `modpoll` subscribes to `modpoll/+/set`. Publish t
 
 ```json
 {
-  "ref": "PID_V3V_EC_Consigne_reprise",
-  "value": 21.5
+  "PID_V3V_EC_Consigne_reprise": 21.5,
+  "BP_MA_CTA": true
 }
 ```
+
+Unknown reference names in the payload are skipped with a warning.
 
 Example with [`examples/CTA/cta_conf_restaurant.csv`](examples/CTA/cta_conf_restaurant.csv): an `int16` reference with scale `0.1` accepts `21.5` as input; the raw register value `215` is written.
 

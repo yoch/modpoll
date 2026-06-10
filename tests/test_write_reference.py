@@ -161,6 +161,54 @@ def test_write_register_bit_read_modify_write():
     assert master.writes == [("register", 0, 0x0008)]
 
 
+def test_write_references_batch(caplog):
+    device = Device("cta_conf", 1)
+    poller = Poller(device, 3, 0, 2, "BE_BE")
+    setpoint = Reference(device, "setpoint", "0", "int16", "rw", None, None)
+    gain = Reference(device, "gain", "1", "int16", "rw", None, None)
+    poller.add_readable_reference(setpoint)
+    poller.add_readable_reference(gain)
+    device.pollerList = [poller]
+    device.references = {"setpoint": setpoint, "gain": gain}
+
+    master = FakeModbusMaster(registers=[0, 0])
+    handler = _handler_with_device(device, master)
+    with caplog.at_level("INFO"):
+        handler.write_references("cta_conf", {"setpoint": 10, "gain": 20})
+
+    assert master.writes == [("register", 0, 10), ("register", 1, 20)]
+    assert "Wrote 2 value(s) for device=cta_conf" in caplog.text
+
+
+def test_write_references_skips_unknown(caplog):
+    device = Device("dev", 1)
+    poller = Poller(device, 3, 0, 1, "BE_BE")
+    ref = Reference(device, "setpoint", "0", "int16", "rw", None, None)
+    poller.add_readable_reference(ref)
+    device.pollerList = [poller]
+    device.references = {"setpoint": ref}
+
+    master = FakeModbusMaster(registers=[0])
+    handler = _handler_with_device(device, master)
+    with caplog.at_level("WARNING"):
+        handler.write_references("dev", {"setpoint": 10, "missing": 1})
+
+    assert master.writes == [("register", 0, 10)]
+    assert "Unknown reference 'missing'" in caplog.text
+
+
+def test_write_references_empty_after_filter(caplog):
+    device = Device("dev", 1)
+    device.pollerList = []
+    device.references = {}
+
+    handler = _handler_with_device(device, MagicMock())
+    with caplog.at_level("WARNING"):
+        handler.write_references("dev", {"missing": 1})
+
+    assert "No known references in write payload" in caplog.text
+
+
 def test_write_rejects_read_only_reference():
     device = Device("dev", 1)
     poller = Poller(device, 3, 0, 1, "BE_BE")
