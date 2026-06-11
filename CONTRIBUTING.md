@@ -125,6 +125,15 @@ tagging a release.
    `modpoll.arg_parser.get_parser` so the CLI reference stays auto-generated.
 5. **Smoke build** — run `make docs` locally and fix any Sphinx errors before
    pushing the tag.
+6. **Quality gate** — run the same checks as CI before tagging:
+
+   ```bash
+   make check
+   make test
+   ```
+
+   If `make check` reformats files (e.g. `black`), stage the fixes and amend or
+   recommit before pushing.
 
 ### Typical release flow
 
@@ -133,6 +142,7 @@ tagging a release.
 # 2. finalize CHANGELOG.md (move [Unreleased] → [X.Y.Z])
 # 3. complete the documentation checklist above
 make docs-changelog
+make check && make test
 git tag vX.Y.Z
 git push origin main
 git push origin vX.Y.Z

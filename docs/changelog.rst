@@ -1,14 +1,30 @@
 Changelog
 =========
 
-[Unreleased]
-------------
+`2.1.1 <https://github.com/yoch/modpoll2mqtt/compare/v2.1.0...v2.1.1>`__ (2026-06-11)
+-------------------------------------------------------------------------------------
 
 Features
 ~~~~~~~~
 
 -  add ``--mqtt-retain`` to set the MQTT retain flag on data publishes
    (diagnostics topics are never retained)
+
+Documentation
+~~~~~~~~~~~~~
+
+-  add release documentation checklist for agents and maintainers in
+   CONTRIBUTING.md
+-  align narrative docs with MQTT reference-map write format and
+   ``--mqtt-keys`` usage
+
+Internal
+~~~~~~~~
+
+-  centralize MQTT data publish policy (QoS and retain) in
+   ``MqttHandler.publish_data_message``
+
+.. _section-1:
 
 `2.1.0 <https://github.com/yoch/modpoll2mqtt/compare/v2.0.0...v2.1.0>`__ (2026-06-10)
 -------------------------------------------------------------------------------------
@@ -32,7 +48,7 @@ BREAKING CHANGES
 -  MQTT write payload must be a reference map (``{"ref": val}``);
    ``ref``/``value`` object format removed
 
-.. _section-1:
+.. _section-2:
 
 `2.0.0 <https://github.com/yoch/modpoll2mqtt/compare/v1.6.0...v2.0.0>`__ (2026-06-10)
 -------------------------------------------------------------------------------------

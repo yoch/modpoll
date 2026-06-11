@@ -252,9 +252,7 @@ class MqttHandler:
         return False
 
     def publish_data_message(self, topic: str, msg: str) -> Optional[MQTTMessageInfo]:
-        return self.publish(
-            topic, msg, qos=self.qos, retain=self.retain_data_publishes
-        )
+        return self.publish(topic, msg, qos=self.qos, retain=self.retain_data_publishes)
 
     def publish(
         self, topic: str, msg: str, qos: Optional[int] = None, retain: bool = False
