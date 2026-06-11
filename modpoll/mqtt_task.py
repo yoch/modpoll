@@ -37,6 +37,7 @@ class MqttHandler:
         mqtt_version: str = "5.0",
         log_level: str = "INFO",
         rx_queue_size: int = 1000,
+        retain_data_publishes: bool = False,
     ):
         self.name = name
         self.host = host
@@ -56,6 +57,7 @@ class MqttHandler:
         self.mqtt_client: Optional[MQTTClient] = None
         self.clean_start_or_session = qos == 0
         self.rx_queue_size = rx_queue_size
+        self.retain_data_publishes = retain_data_publishes
         self.rx_queue: queue.Queue = queue.Queue(maxsize=rx_queue_size)
         self._connected_event = Event()
         self._connect_rc: Optional[int] = None
@@ -248,6 +250,11 @@ class MqttHandler:
         self.logger.error("MQTT connect timeout waiting for CONNACK.")
         self._stop_mqtt_loop()
         return False
+
+    def publish_data_message(self, topic: str, msg: str) -> Optional[MQTTMessageInfo]:
+        return self.publish(
+            topic, msg, qos=self.qos, retain=self.retain_data_publishes
+        )
 
     def publish(
         self, topic: str, msg: str, qos: Optional[int] = None, retain: bool = False

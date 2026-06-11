@@ -94,8 +94,8 @@ def test_mqtt_publish_includes_device_when_first_poller_succeeds():
     handler.deviceList = [device]
     handler.publish_data()
 
-    assert mqtt.publish.called
-    payload = json.loads(mqtt.publish.call_args[0][1])
+    assert mqtt.publish_data_message.called
+    payload = json.loads(mqtt.publish_data_message.call_args[0][1])
     assert payload["r1"] == 0x1111
     assert "r2" not in payload
 
@@ -158,7 +158,7 @@ def test_publish_data_uses_name_with_unit_by_default():
     handler.deviceList = [device]
     handler.publish_data()
 
-    payload = json.loads(mqtt.publish.call_args[0][1])
+    payload = json.loads(mqtt.publish_data_message.call_args[0][1])
     assert payload == {"temp|°C": 21.2}
 
 
@@ -180,7 +180,7 @@ def test_publish_data_mqtt_keys_name_only():
     handler.deviceList = [device]
     handler.publish_data()
 
-    payload = json.loads(mqtt.publish.call_args[0][1])
+    payload = json.loads(mqtt.publish_data_message.call_args[0][1])
     assert payload == {"temp": 21.2}
 
 
@@ -211,40 +211,24 @@ def test_mqtt_retain_cli_option():
     assert args.mqtt_retain is True
 
 
-@pytest.mark.parametrize("mqtt_retain,expected", [(False, False), (True, True)])
-def test_publish_data_retain_grouped(mqtt_retain, expected):
+@pytest.mark.parametrize("mqtt_single_publish", [False, True])
+def test_publish_data_uses_mqtt_handler_publish_data_message(mqtt_single_publish):
     mqtt = MagicMock()
     handler = ModbusHandler(
         MagicMock(),
         "dummy.csv",
         mqtt_handler=mqtt,
         mqtt_publish_topic_pattern="t/{{device_name}}",
-        mqtt_retain=mqtt_retain,
+        mqtt_single_publish=mqtt_single_publish,
     )
     handler.deviceList = [_device_with_temp_ref()]
     handler.publish_data()
 
-    assert mqtt.publish.call_args.kwargs.get("retain", False) is expected
+    assert mqtt.publish_data_message.called
+    mqtt.publish.assert_not_called()
 
 
-def test_publish_data_retain_true_single():
-    mqtt = MagicMock()
-    handler = ModbusHandler(
-        MagicMock(),
-        "dummy.csv",
-        mqtt_handler=mqtt,
-        mqtt_publish_topic_pattern="t/{{device_name}}",
-        mqtt_single_publish=True,
-        mqtt_retain=True,
-    )
-    handler.deviceList = [_device_with_temp_ref()]
-    handler.publish_data()
-
-    for call in mqtt.publish.call_args_list:
-        assert call.kwargs["retain"] is True
-
-
-def test_publish_diagnostics_does_not_use_retain():
+def test_publish_diagnostics_uses_publish_not_data_message():
     device = _device_with_temp_ref()
     device.pollCount = 3
     device.errorCount = 0
@@ -255,12 +239,12 @@ def test_publish_diagnostics_does_not_use_retain():
         "dummy.csv",
         mqtt_handler=mqtt,
         mqtt_diagnostics_topic_pattern="t/{{device_name}}/diag",
-        mqtt_retain=True,
     )
     handler.deviceList = [device]
     handler.publish_diagnostics()
 
-    assert mqtt.publish.called
+    mqtt.publish.assert_called_once()
+    mqtt.publish_data_message.assert_not_called()
     assert mqtt.publish.call_args.kwargs.get("retain", False) is False
 
 
@@ -283,7 +267,7 @@ def test_publish_data_omits_null_reference_values():
     handler.deviceList = [device]
     handler.publish_data()
 
-    payload = json.loads(mqtt.publish.call_args[0][1])
+    payload = json.loads(mqtt.publish_data_message.call_args[0][1])
     assert payload == {"good": 42}
 
 
@@ -531,7 +515,9 @@ def test_mqtt_single_publishes_bool_as_json():
     handler.deviceList = [device]
     handler.publish_data()
 
-    published = {call[0][0]: call[0][1] for call in mqtt.publish.call_args_list}
+    published = {
+        call[0][0]: call[0][1] for call in mqtt.publish_data_message.call_args_list
+    }
     assert published["t/dev/flag"] == "true"
     assert published["t/dev/flags/0"] == "true"
     assert published["t/dev/flags/1"] == "false"
@@ -556,7 +542,7 @@ def test_publish_data_omits_non_finite_floats():
     handler.deviceList = [device]
     handler.publish_data()
 
-    payload = json.loads(mqtt.publish.call_args[0][1])
+    payload = json.loads(mqtt.publish_data_message.call_args[0][1])
     assert payload == {"good": 1.5}
 
 

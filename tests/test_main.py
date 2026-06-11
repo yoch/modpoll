@@ -28,6 +28,7 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
             mqtt_version,
             log_level,
             rx_queue_size=1000,
+            retain_data_publishes=False,
         ):
             captured["init"] = {
                 "name": name,
@@ -45,6 +46,7 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
                 "mqtt_version": mqtt_version,
                 "log_level": log_level,
                 "rx_queue_size": rx_queue_size,
+                "retain_data_publishes": retain_data_publishes,
             }
 
         def setup(self):
@@ -102,6 +104,53 @@ def test_mqtt_tls_cli_options_forwarded(monkeypatch):
     assert init_args["insecure"] is True
     assert init_args["mqtt_version"] == "3.1.1"
     assert init_args["subscribe_topics"] == ["modpoll/+/set"]
+    assert init_args["retain_data_publishes"] is False
+
+
+def test_mqtt_retain_cli_option_forwarded(monkeypatch):
+    captured = {}
+
+    class FakeMqttHandler:
+        def __init__(self, *args, retain_data_publishes=False, **kwargs):
+            captured["retain_data_publishes"] = retain_data_publishes
+
+        def setup(self):
+            return True
+
+        def connect(self):
+            return True
+
+        def close(self):
+            pass
+
+        def receive(self):
+            return None, None
+
+    def fake_setup_modbus_handlers(args, mqtt_handler):
+        raise SystemExit(0)
+
+    monkeypatch.setattr(main, "MqttHandler", FakeMqttHandler)
+    monkeypatch.setattr(main, "setup_modbus_handlers", fake_setup_modbus_handlers)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "modpoll",
+            "--config",
+            "dummy.csv",
+            "--tcp",
+            "127.0.0.1",
+            "--mqtt-host",
+            "broker.local",
+            "--mqtt-retain",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main.app()
+
+    assert excinfo.value.code == 0
+    assert captured["retain_data_publishes"] is True
 
 
 def test_csv_delimiter_invalid_code_rejected():

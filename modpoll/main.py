@@ -89,6 +89,7 @@ def app(name="modpoll"):
                 mqtt_version=args.mqtt_version,
                 log_level=args.loglevel,
                 rx_queue_size=args.mqtt_rx_queue_size,
+                retain_data_publishes=args.mqtt_retain,
             )
             if mqtt_handler.setup() and mqtt_handler.connect():
                 logger.info("Connected to MQTT broker.")

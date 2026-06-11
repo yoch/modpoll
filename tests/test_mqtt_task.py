@@ -131,6 +131,47 @@ def test_publish_when_connected_calls_client_publish():
     assert stub.calls == [("topic", "message", 2, True)]
 
 
+@pytest.mark.parametrize(
+    "retain_data_publishes,qos,expected_retain",
+    [(False, 0, False), (True, 1, True), (False, 2, False)],
+)
+def test_publish_data_message_uses_handler_qos_and_retain(
+    retain_data_publishes, qos, expected_retain
+):
+    handler = MqttHandler(
+        name="test_mqtt",
+        host="broker.emqx.io",
+        port=1883,
+        user=None,
+        password=None,
+        clientid="test_client_retain",
+        qos=qos,
+        retain_data_publishes=retain_data_publishes,
+    )
+
+    class StubClient:
+        def __init__(self):
+            self.calls = []
+
+        def is_connected(self):
+            return True
+
+        def publish(self, topic, msg, qos, retain):
+            self.calls.append((topic, msg, qos, retain))
+
+            class PubInfo:
+                rc = 0
+
+            return PubInfo()
+
+    stub = StubClient()
+    handler.mqtt_client = stub
+
+    handler.publish_data_message("data/topic", "payload")
+
+    assert stub.calls == [("data/topic", "payload", qos, expected_retain)]
+
+
 def test_mqtt_tlsv1_unsupported_returns_false_from_setup(monkeypatch):
     handler = MqttHandler(
         name="test_mqtt",

@@ -383,7 +383,6 @@ class ModbusHandler:
         mqtt_diagnostics_topic_pattern: Optional[str] = None,
         mqtt_single_publish: bool = False,
         mqtt_keys: str = _MQTT_KEYS_NAME_WITH_UNIT,
-        mqtt_retain: bool = False,
         autoremove: bool = False,
         csv_delimiter_code: str = "comma",
     ):
@@ -399,7 +398,6 @@ class ModbusHandler:
         self.mqtt_diagnostics_topic_pattern = mqtt_diagnostics_topic_pattern
         self.mqtt_single_publish = mqtt_single_publish
         self.mqtt_keys = mqtt_keys
-        self.mqtt_retain = mqtt_retain
         self.autoremove = autoremove
         self.deviceList: List[Device] = []
         self.logger = logging.getLogger(__name__)
@@ -708,9 +706,6 @@ class ModbusHandler:
             print(f"\nDevice: {dev.name}")
             print(table)
 
-    def _publish_mqtt_data(self, topic: str, msg: str) -> None:
-        self.mqtt_handler.publish(topic, msg, retain=self.mqtt_retain)
-
     def publish_data(self, timestamp=None):
         if not self.mqtt_handler or not self.mqtt_publish_topic_pattern:
             return
@@ -743,14 +738,14 @@ class ModbusHandler:
                             msg = (
                                 json.dumps(entry) if isinstance(entry, bool) else entry
                             )
-                            self._publish_mqtt_data(f"{topic}/{i}", msg)
+                            self.mqtt_handler.publish_data_message(f"{topic}/{i}", msg)
                     else:
                         msg = (
                             json.dumps(ref_val)
                             if isinstance(ref_val, bool)
                             else ref_val
                         )
-                        self._publish_mqtt_data(topic, msg)
+                        self.mqtt_handler.publish_data_message(topic, msg)
 
             if payload and not self.mqtt_single_publish:
                 if timestamp is not None:
@@ -758,7 +753,7 @@ class ModbusHandler:
                 topic = self.mqtt_publish_topic_pattern.replace(
                     "{{device_name}}", dev.name
                 )
-                self._publish_mqtt_data(topic, json.dumps(payload))
+                self.mqtt_handler.publish_data_message(topic, json.dumps(payload))
 
     def publish_diagnostics(self):
         if not self.mqtt_handler:
@@ -842,7 +837,6 @@ def setup_modbus_handlers(args, mqtt_handler: Optional[MqttHandler] = None):
             mqtt_diagnostics_topic_pattern=args.mqtt_diagnostics_topic_pattern,
             mqtt_single_publish=args.mqtt_single,
             mqtt_keys=args.mqtt_keys,
-            mqtt_retain=args.mqtt_retain,
             autoremove=args.autoremove,
             csv_delimiter_code=args.csv_delimiter,
         )
