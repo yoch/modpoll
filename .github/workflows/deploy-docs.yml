@@ -1,0 +1,40 @@
+# Redeploy the documentation site without a PyPI release.
+# Use when gh-pages was updated but GitHub Pages build failed, or docs need a refresh.
+name: deploy-docs
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: true
+
+jobs:
+  deploy-docs:
+    if: github.repository == 'yoch/modpoll2mqtt'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up poetry
+        uses: ./.github/actions/setup-poetry
+
+      - name: Set up pandoc
+        uses: ./.github/actions/setup-pandoc
+
+      - name: Install package for doc build
+        run: |
+          source .venv/bin/activate
+          poetry install --only-root --no-interaction
+
+      - name: Build documentation
+        run: make docs
+
+      - name: Deploy documentation
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html

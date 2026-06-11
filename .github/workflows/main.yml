@@ -67,5 +67,10 @@ jobs:
       - name: Set up pandoc
         uses: ./.github/actions/setup-pandoc
 
+      - name: Install package for doc build
+        run: |
+          source .venv/bin/activate
+          poetry install --only-root --no-interaction
+
       - name: Build documentation
         run: make docs

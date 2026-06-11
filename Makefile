@@ -53,7 +53,9 @@ docs-changelog: ## Regenerate docs/changelog.rst from CHANGELOG.md
 
 .PHONY: docs
 docs: docs-changelog ## Build docs into html files
+	@rm -rf docs/_build
 	@poetry run sphinx-build docs/ docs/_build/html
+	@rm -rf docs/_build/html/.doctrees docs/_build/html/_sources
 
 .PHONY: docs-serve
 docs-serve: docs-changelog ## Build and serve the docs for local dev

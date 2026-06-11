@@ -125,7 +125,12 @@ tagging a release.
    `modpoll.arg_parser.get_parser` so the CLI reference stays auto-generated.
 5. **Smoke build** — run `make docs` locally and fix any Sphinx errors before
    pushing the tag.
-6. **Quality gate** — run the same checks as CI before tagging:
+6. **Live site check** — after the `release-main` workflow completes, confirm
+   [yoch.github.io/modpoll2mqtt](https://yoch.github.io/modpoll2mqtt/) shows the
+   new changelog version and CLI options (not only that the `gh-pages` branch
+   was updated). If the site is stale, check **Settings → Pages → Build status**
+   for a failed Pages build; redeploy with **Actions → deploy-docs → Run workflow**.
+7. **Quality gate** — run the same checks as CI before tagging:
 
    ```bash
    make check
@@ -144,6 +149,7 @@ tagging a release.
 make docs-changelog
 make check && make test
 git tag vX.Y.Z
+# after push + release workflow: verify https://yoch.github.io/modpoll2mqtt/changelog.html
 git push origin main
 git push origin vX.Y.Z
 gh release create vX.Y.Z --title "vX.Y.Z" --notes-file CHANGELOG-excerpt.md
