@@ -105,10 +105,34 @@ They run only when:
 
 The workflow publishes the package to PyPI (trusted publisher / OIDC) and deploys Sphinx output to the `gh-pages` branch.
 
+### Documentation checklist (required before every release)
+
+There is no automated doc gate in CI. **Agents and maintainers must verify
+documentation manually** whenever code or CLI options change — especially before
+tagging a release.
+
+1. **`CHANGELOG.md`** — add or move entries under `[Unreleased]`; each new CLI
+   flag introduced with `add \`--flag\`` in the Features section.
+2. **`docs/changelog.rst`** — regenerate from `CHANGELOG.md` (`make docs-changelog`
+   or `make docs`); commit the updated file with the release commit.
+3. **Narrative docs** — keep `README.md`, `docs/quickstart.rst`, and
+   `docs/usage.rst` aligned with current behavior:
+   - every new user-facing CLI flag is mentioned in at least one of these files;
+   - MQTT write examples use a **reference map** (`{"ref_name": val}`), not the
+     deprecated `ref`/`value` object format removed in 2.1.0;
+   - breaking changes are called out with the version they shipped in.
+4. **`docs/usage.rst`** — keep the `.. argparse::` directive pointing at
+   `modpoll.arg_parser.get_parser` so the CLI reference stays auto-generated.
+5. **Smoke build** — run `make docs` locally and fix any Sphinx errors before
+   pushing the tag.
+
 ### Typical release flow
 
 ```bash
-# bump version in pyproject.toml, update CHANGELOG.md, commit, push main
+# 1. bump version in pyproject.toml
+# 2. finalize CHANGELOG.md (move [Unreleased] → [X.Y.Z])
+# 3. complete the documentation checklist above
+make docs-changelog
 git tag vX.Y.Z
 git push origin main
 git push origin vX.Y.Z

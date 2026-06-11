@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+[Unreleased]
+------------
 
 Features
 ~~~~~~~~
@@ -12,6 +12,8 @@ Features
 
 `2.1.0 <https://github.com/yoch/modpoll2mqtt/compare/v2.0.0...v2.1.0>`__ (2026-06-10)
 -------------------------------------------------------------------------------------
+
+.. _features-1:
 
 Features
 ~~~~~~~~
@@ -42,7 +44,7 @@ Project
    package renamed to ``modpoll2mqtt``, repository ``yoch/modpoll2mqtt``
 -  CLI command and Python module remain ``modpoll``
 
-.. _features-1:
+.. _features-2:
 
 Features
 ~~~~~~~~

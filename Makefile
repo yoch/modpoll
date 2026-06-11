@@ -47,14 +47,16 @@ publish: ## Publish a release to PyPI.
 .PHONY: build-and-publish
 build-and-publish: build publish ## Build and publish.
 
-.PHONY: docs
-docs: ## Build docs into html files
+.PHONY: docs-changelog
+docs-changelog: ## Regenerate docs/changelog.rst from CHANGELOG.md
 	@awk '/<!-- end-docs-changelog -->/{exit} {print}' CHANGELOG.md | poetry run pandoc --from=markdown --to=rst -o docs/changelog.rst
+
+.PHONY: docs
+docs: docs-changelog ## Build docs into html files
 	@poetry run sphinx-build docs/ docs/_build/html
 
 .PHONY: docs-serve
-docs-serve: ## Build and serve the docs for local dev
-	@awk '/<!-- end-docs-changelog -->/{exit} {print}' CHANGELOG.md | poetry run pandoc --from=markdown --to=rst -o docs/changelog.rst
+docs-serve: docs-changelog ## Build and serve the docs for local dev
 	@poetry run sphinx-autobuild docs/ docs/_build/html
 
 .PHONY: help
