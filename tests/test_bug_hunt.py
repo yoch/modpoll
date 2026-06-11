@@ -59,6 +59,15 @@ def _device_with_two_register_pollers():
     return device, ref1, ref2
 
 
+def _device_with_temp_ref(val=21):
+    device = Device("dev", 1)
+    device.pollSuccess = True
+    ref = Reference(device, "temp", "0", "int16", "r", None, None)
+    ref.val = val
+    device.references = {"temp": ref}
+    return device
+
+
 # ---------------------------------------------------------------------------
 # Fixed: pollSuccess OR semantics for multi-poller devices
 # ---------------------------------------------------------------------------
@@ -187,6 +196,72 @@ def test_mqtt_keys_name_only_cli_option():
         ]
     )
     assert args.mqtt_keys == "name-only"
+
+
+def test_mqtt_retain_cli_option():
+    args = get_parser().parse_args(
+        [
+            "--config",
+            "dummy.csv",
+            "--tcp",
+            "127.0.0.1",
+            "--mqtt-retain",
+        ]
+    )
+    assert args.mqtt_retain is True
+
+
+@pytest.mark.parametrize("mqtt_retain,expected", [(False, False), (True, True)])
+def test_publish_data_retain_grouped(mqtt_retain, expected):
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+        mqtt_retain=mqtt_retain,
+    )
+    handler.deviceList = [_device_with_temp_ref()]
+    handler.publish_data()
+
+    assert mqtt.publish.call_args.kwargs.get("retain", False) is expected
+
+
+def test_publish_data_retain_true_single():
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_publish_topic_pattern="t/{{device_name}}",
+        mqtt_single_publish=True,
+        mqtt_retain=True,
+    )
+    handler.deviceList = [_device_with_temp_ref()]
+    handler.publish_data()
+
+    for call in mqtt.publish.call_args_list:
+        assert call.kwargs["retain"] is True
+
+
+def test_publish_diagnostics_does_not_use_retain():
+    device = _device_with_temp_ref()
+    device.pollCount = 3
+    device.errorCount = 0
+
+    mqtt = MagicMock()
+    handler = ModbusHandler(
+        MagicMock(),
+        "dummy.csv",
+        mqtt_handler=mqtt,
+        mqtt_diagnostics_topic_pattern="t/{{device_name}}/diag",
+        mqtt_retain=True,
+    )
+    handler.deviceList = [device]
+    handler.publish_diagnostics()
+
+    assert mqtt.publish.called
+    assert mqtt.publish.call_args.kwargs.get("retain", False) is False
 
 
 def test_publish_data_omits_null_reference_values():

@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+Features
+~~~~~~~~
+
+-  add ``--mqtt-retain`` to set the MQTT retain flag on data publishes
+   (diagnostics topics are never retained)
+
 `2.1.0 <https://github.com/yoch/modpoll2mqtt/compare/v2.0.0...v2.1.0>`__ (2026-06-10)
 -------------------------------------------------------------------------------------
 

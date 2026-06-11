@@ -11,13 +11,14 @@
 
 Install the PyPI package as `modpoll2mqtt`; the executable command remains `modpoll`.
 
-Fork of [modpoll](https://github.com/gavinying/modpoll), with semantic MQTT writes by `ref` + `value` and CTA (air handling unit) examples.
+Fork of [modpoll](https://github.com/gavinying/modpoll), with semantic MQTT writes by CSV reference name and CTA (air handling unit) examples.
 
 ## Features
 
 - Modbus RTU, TCP, and UDP (CSV configuration files)
 - Local display of polled data (debug mode)
 - MQTT publishing of references (configurable topics)
+- Optional MQTT retain on data publishes (`--mqtt-retain`)
 - MQTT writes by CSV reference name (`modpoll/<device>/set`)
 - Local CSV export of polled data
 - Bit-level access on registers and coils
@@ -68,6 +69,8 @@ modpoll \
 ```
 
 Data is published to `modpoll/<device_name>/data` by default.
+
+Add `--mqtt-retain` so the broker keeps the last data message per topic for new subscribers. Diagnostics topics are never retained. If a device goes offline, retained values may still appear live until the next successful publish.
 
 ### MQTT write by reference
 

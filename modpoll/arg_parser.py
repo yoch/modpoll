@@ -184,6 +184,11 @@ def get_parser():
         ),
     )
     parser.add_argument(
+        "--mqtt-retain",
+        action="store_true",
+        help="Set the MQTT retain flag on published data messages.",
+    )
+    parser.add_argument(
         "--diagnostics-rate",
         type=float,
         default=0,
