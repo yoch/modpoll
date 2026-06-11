@@ -55,6 +55,8 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#framers-and-transports">Framers and transports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mqtt-retain">MQTT retain</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mqtt-payload-keys">MQTT payload keys</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#mqtt-write-commands">MQTT write commands</a></li>
 </ul>
 </li>
@@ -106,7 +108,7 @@
                <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">use</span><span class="o">-</span><span class="n">tls</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">insecure</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">cacerts</span> <span class="n">MQTT_CACERTS</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">tls</span><span class="o">-</span><span class="n">version</span> <span class="p">{</span><span class="n">tlsv1</span><span class="mf">.2</span><span class="p">,</span><span class="n">tlsv1</span><span class="mf">.1</span><span class="p">,</span><span class="n">tlsv1</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">single</span><span class="p">]</span>
-               <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">keys</span> <span class="p">{</span><span class="n">name</span><span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">unit</span><span class="p">,</span><span class="n">name</span><span class="o">-</span><span class="n">only</span><span class="p">}]</span>
+               <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">keys</span> <span class="p">{</span><span class="n">name</span><span class="o">-</span><span class="k">with</span><span class="o">-</span><span class="n">unit</span><span class="p">,</span><span class="n">name</span><span class="o">-</span><span class="n">only</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">mqtt</span><span class="o">-</span><span class="n">retain</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">diagnostics</span><span class="o">-</span><span class="n">rate</span> <span class="n">DIAGNOSTICS_RATE</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">autoremove</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">loglevel</span> <span class="p">{</span><span class="n">DEBUG</span><span class="p">,</span><span class="n">INFO</span><span class="p">,</span><span class="n">WARNING</span><span class="p">,</span><span class="n">ERROR</span><span class="p">,</span><span class="n">CRITICAL</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">timestamp</span><span class="p">]</span>
                <span class="p">[</span><span class="o">--</span><span class="n">delay</span> <span class="n">DELAY</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">framer</span> <span class="p">{</span><span class="n">default</span><span class="p">,</span><span class="n">ascii</span><span class="p">,</span><span class="n">rtu</span><span class="p">,</span><span class="n">socket</span><span class="p">}]</span>
@@ -242,6 +244,10 @@
 <p>MQTT JSON payload key format. “name-with-unit” appends “<a href="#id1"><span class="problematic" id="id2">|</span></a>unit” when configured (default). “name-only” uses reference names only.</p>
 <p>Default: “name-with-unit”</p>
 </dd>
+<dt><kbd>--mqtt-retain</kbd></dt>
+<dd><p>Set the MQTT retain flag on published data messages.</p>
+<p>Default: False</p>
+</dd>
 <dt><kbd>--diagnostics-rate</kbd></dt>
 <dd><p>Time in seconds as publishing period for each device diagnostics</p>
 <p>Default: 0</p>
@@ -325,22 +331,44 @@
 <li><p>TCP/UDP (<cite>–tcp</cite>/<cite>–udp</cite>) use the <cite>socket</cite> framer; other framers are rejected. If <cite>–framer default</cite> is used, pymodbus defaults to socket framer.</p></li>
 </ul>
 </section>
+<section id="mqtt-retain">
+<h2>MQTT retain<a class="headerlink" href="#mqtt-retain" title="Link to this heading"></a></h2>
+<p>By default, published data messages are <strong>not</strong> retained by the broker. Use <code class="docutils literal notranslate"><span class="pre">--mqtt-retain</span></code> to set the MQTT retain flag on data publishes (<code class="docutils literal notranslate"><span class="pre">publish_data</span></code> only; diagnostics are never retained).</p>
+<p>This is useful when subscribers (dashboards, automations) connect after <code class="docutils literal notranslate"><span class="pre">modpoll</span></code> has already started: they receive the last known values immediately instead of waiting for the next poll cycle.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>modpoll<span class="w"> </span>--tcp<span class="w"> </span><span class="m">192</span>.168.1.10<span class="w"> </span>--mqtt-host<span class="w"> </span>localhost<span class="w"> </span>--mqtt-retain<span class="w"> </span>--config<span class="w"> </span>examples/modsim.csv
+</pre></div>
+</div>
+<p><strong>Caveats:</strong></p>
+<ul class="simple">
+<li><p>If a Modbus device becomes unreachable, <code class="docutils literal notranslate"><span class="pre">modpoll</span></code> stops publishing for that device but the broker may still serve the last retained message, which can look like a live value.</p></li>
+<li><p>Retain is not a last-will/offline signal; it only stores the last successful publish per topic.</p></li>
+</ul>
+</section>
+<section id="mqtt-payload-keys">
+<h2>MQTT payload keys<a class="headerlink" href="#mqtt-payload-keys" title="Link to this heading"></a></h2>
+<p>By default, grouped MQTT publish payloads use reference names as JSON keys, appending <code class="docutils literal notranslate"><span class="pre">|unit</span></code> when a unit is configured in the CSV (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;temp|°C&quot;</span></code>). Use <code class="docutils literal notranslate"><span class="pre">--mqtt-keys</span> <span class="pre">name-only</span></code> to publish keys without the unit suffix:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>modpoll<span class="w"> </span>--tcp<span class="w"> </span><span class="m">192</span>.168.1.10<span class="w"> </span>--mqtt-host<span class="w"> </span>localhost<span class="w"> </span>--mqtt-keys<span class="w"> </span>name-only<span class="w"> </span>--config<span class="w"> </span>examples/modsim.csv
+</pre></div>
+</div>
+</section>
 <section id="mqtt-write-commands">
 <h2>MQTT write commands<a class="headerlink" href="#mqtt-write-commands" title="Link to this heading"></a></h2>
-<p>Subscribe pattern (default): <code class="docutils literal notranslate"><span class="pre">modpoll/+/set</span></code>. Publish to <code class="docutils literal notranslate"><span class="pre">modpoll/&lt;device&gt;/set</span></code> with payload:</p>
+<p>Subscribe pattern (default): <code class="docutils literal notranslate"><span class="pre">modpoll/+/set</span></code>. Publish to <code class="docutils literal notranslate"><span class="pre">modpoll/&lt;device&gt;/set</span></code> with a JSON object mapping reference names to values:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PID_V3V_EC_Consigne_reprise&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">21.5</span>
+<span class="w">  </span><span class="nt">&quot;PID_V3V_EC_Consigne_reprise&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">21.5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;BP_MA_CTA&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>The <strong>device</strong> is taken from the MQTT topic, not from the JSON payload (a <code class="docutils literal notranslate"><span class="pre">device</span></code> key in the payload is ignored).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ref</span></code> identifies the CSV reference; the pair <code class="docutils literal notranslate"><span class="pre">(device,</span> <span class="pre">ref)</span></code> must be unique (the same <code class="docutils literal notranslate"><span class="pre">ref</span></code> name may exist on different devices).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">value</span></code> uses the same decoded engineering units as MQTT publish (scale and dtype from the CSV are handled by modpoll).</p></li>
+<li><p>The <strong>device</strong> is taken from the MQTT topic, not from the JSON payload.</p></li>
+<li><p>Reference names in the payload must match the CSV configuration; unknown keys are skipped with a warning.</p></li>
+<li><p>Values use the same decoded engineering units as MQTT publish (scale and dtype from the CSV are handled by modpoll).</p></li>
 <li><p>Only references marked <code class="docutils literal notranslate"><span class="pre">rw</span></code> or <code class="docutils literal notranslate"><span class="pre">w</span></code> in the CSV can be written.</p></li>
+<li><p>Multiple references can be written in a single message.</p></li>
 </ul>
 <p>Duplicate reference names on the same device are rejected when loading the config file.</p>
+<p><strong>Breaking change (2.1.0+):</strong> the <code class="docutils literal notranslate"><span class="pre">ref</span></code>/<code class="docutils literal notranslate"><span class="pre">value</span></code> object format is no longer supported; use a reference map instead.</p>
 <p><strong>Breaking change (2.0.0+):</strong> the previous low-level format (<code class="docutils literal notranslate"><span class="pre">object_type</span></code>, <code class="docutils literal notranslate"><span class="pre">address</span></code>, <code class="docutils literal notranslate"><span class="pre">value</span></code>) is no longer supported.</p>
 </section>
 </section>
